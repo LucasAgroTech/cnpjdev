@@ -25,9 +25,18 @@ class CNPJQueue:
         """
         self.api_client = api_client
         self.db = db
-        self.queue = asyncio.Queue()
+        self._queue = None
         self.processing = False
         logger.info("Gerenciador de fila inicializado")
+    
+    @property
+    async def queue(self):
+        """
+        Obtém a fila assíncrona, criando-a se necessário
+        """
+        if self._queue is None:
+            self._queue = asyncio.Queue()
+        return self._queue
     
     async def add_to_queue(self, cnpjs: List[str]) -> None:
         """
@@ -38,6 +47,9 @@ class CNPJQueue:
         """
         logger.info(f"Adicionando {len(cnpjs)} CNPJs à fila")
         
+        # Obtém a fila
+        queue = await self.queue
+        
         for cnpj in cnpjs:
             # Limpa o CNPJ e adiciona formatação
             cnpj_clean = ''.join(filter(str.isdigit, cnpj))
@@ -47,7 +59,7 @@ class CNPJQueue:
             self.db.add(query)
             
             # Adiciona à fila assíncrona
-            await self.queue.put(cnpj_clean)
+            await queue.put(cnpj_clean)
         
         self.db.commit()
         logger.info(f"{len(cnpjs)} CNPJs adicionados à fila com sucesso")
@@ -64,8 +76,11 @@ class CNPJQueue:
         self.processing = True
         
         try:
-            while not self.queue.empty():
-                cnpj = await self.queue.get()
+            # Obtém a fila
+            queue = await self.queue
+            
+            while not queue.empty():
+                cnpj = await queue.get()
                 
                 try:
                     # Atualiza o status da consulta
@@ -165,7 +180,7 @@ class CNPJQueue:
                         self.db.commit()
                 
                 # Marca a tarefa como concluída
-                self.queue.task_done()
+                queue.task_done()
                 
                 # Aguarda um pouco para evitar sobrecarga
                 await asyncio.sleep(0.5)

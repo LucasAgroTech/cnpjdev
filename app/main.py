@@ -19,9 +19,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info(f"Iniciando aplicação {APP_NAME} v{APP_VERSION}")
 
-# Cria tabelas
+# Cria tabelas com tratamento de erro
 logger.info("Criando tabelas no banco de dados, se necessário")
-Base.metadata.create_all(bind=engine)
+try:
+    # Verifica se as tabelas já existem antes de tentar criá-las
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    
+    # Lista de tabelas que precisamos criar
+    tables_to_create = []
+    existing_tables = inspector.get_table_names()
+    
+    # Verifica quais tabelas precisam ser criadas
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            tables_to_create.append(table)
+    
+    # Cria apenas as tabelas que não existem
+    if tables_to_create:
+        logger.info(f"Criando {len(tables_to_create)} tabelas: {', '.join(t.name for t in tables_to_create)}")
+        # Cria apenas as tabelas específicas que não existem
+        for table in tables_to_create:
+            table.create(bind=engine, checkfirst=True)
+        logger.info("Tabelas criadas com sucesso")
+    else:
+        logger.info("Todas as tabelas já existem no banco de dados")
+except Exception as e:
+    logger.error(f"Erro ao criar tabelas: {str(e)}")
 
 # Cria aplicação FastAPI
 app = FastAPI(

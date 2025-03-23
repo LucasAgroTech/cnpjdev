@@ -23,6 +23,7 @@ def get_api_client():
 
 # Obtém instância do gerenciador de fila
 def get_queue_manager(db: Session = Depends(get_db), api_client: ReceitaWSClient = Depends(get_api_client)):
+    # Cria uma nova instância a cada requisição para evitar problemas com o event loop
     return CNPJQueue(api_client=api_client, db=db)
 
 @router.post("/upload-file/", response_model=schemas.CNPJBatchStatus)
