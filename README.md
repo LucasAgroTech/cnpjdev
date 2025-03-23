@@ -1,6 +1,7 @@
 # CNPJ Consulta
 
 Sistema automatizado de consulta de CNPJs via API da ReceitaWS, com armazenamento em PostgreSQL.
+![Dashboard](dashboard.png)
 
 ## Características
 
