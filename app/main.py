@@ -106,27 +106,50 @@ async def startup_event():
     
     # Carrega CNPJs pendentes e retoma o processamento se AUTO_RESTART_QUEUE estiver habilitado
     if AUTO_RESTART_QUEUE:
-        try:
-            from app.models.database import get_db
-            from app.services.receitaws import ReceitaWSClient
-            from app.services.queue import CNPJQueue
-            
-            # Obtém uma sessão do banco de dados
-            db_generator = get_db()
-            db = next(db_generator)
-            
-            # Cria instâncias necessárias
-            api_client = ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
-            queue_manager = CNPJQueue(api_client=api_client, db=db)
-            
-            # Carrega CNPJs pendentes
-            asyncio.create_task(queue_manager.load_pending_cnpjs())
-            
-            logger.info("Verificação de CNPJs pendentes iniciada")
-        except Exception as e:
-            logger.error(f"Erro ao carregar CNPJs pendentes: {str(e)}")
+        # Agenda a inicialização da fila para ser executada após um breve atraso
+        # Isso permite que o servidor inicie completamente antes de começar o processamento
+        asyncio.create_task(delayed_queue_initialization(2.0))
     else:
         logger.info("Reinicialização automática da fila desabilitada (AUTO_RESTART_QUEUE=False)")
+
+async def delayed_queue_initialization(delay_seconds: float):
+    """
+    Inicializa a fila de processamento após um atraso
+    
+    Args:
+        delay_seconds: Tempo de espera em segundos
+    """
+    try:
+        logger.info(f"Agendando inicialização da fila em {delay_seconds} segundos")
+        await asyncio.sleep(delay_seconds)
+        
+        from app.models.database import get_db
+        from app.services.receitaws import ReceitaWSClient
+        from app.services.queue import CNPJQueue
+        
+        # Obtém uma sessão do banco de dados
+        db_generator = get_db()
+        db = next(db_generator)
+        
+        # Cria instâncias necessárias
+        api_client = ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
+        queue_manager = CNPJQueue(api_client=api_client, db=db)
+        
+        # Define um timeout para a operação de carregamento
+        try:
+            # Carrega CNPJs pendentes com timeout
+            await asyncio.wait_for(
+                queue_manager.load_pending_cnpjs(),
+                timeout=30.0  # 30 segundos de timeout
+            )
+            logger.info("Verificação de CNPJs pendentes iniciada com sucesso")
+        except asyncio.TimeoutError:
+            logger.error("Timeout ao carregar CNPJs pendentes")
+        except Exception as e:
+            logger.error(f"Erro ao carregar CNPJs pendentes: {str(e)}")
+            
+    except Exception as e:
+        logger.error(f"Erro na inicialização da fila: {str(e)}")
 
 @app.on_event("shutdown")
 async def shutdown_event():

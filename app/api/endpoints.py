@@ -31,6 +31,7 @@ def get_queue_manager(db: Session = Depends(get_db), api_client: ReceitaWSClient
 @router.post("/upload-file/", response_model=schemas.CNPJBatchStatus)
 async def upload_file(
     file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     queue_manager: CNPJQueue = Depends(get_queue_manager),
     db: Session = Depends(get_db)
 ):
@@ -43,12 +44,20 @@ async def upload_file(
         # Processa o arquivo
         cnpjs = await process_cnpj_file(file)
         
-        # Adiciona CNPJs à fila
-        await queue_manager.add_to_queue(cnpjs)
+        # Adiciona CNPJs à fila em background
+        async def add_to_queue_background(cnpjs_list):
+            try:
+                await queue_manager.add_to_queue(cnpjs_list)
+                logger.info(f"Processamento em background concluído para {len(cnpjs_list)} CNPJs")
+            except Exception as e:
+                logger.error(f"Erro no processamento em background: {str(e)}")
         
-        # Retorna status
+        # Agenda o processamento em background
+        background_tasks.add_task(add_to_queue_background, cnpjs)
+        
+        # Retorna status imediatamente
         status = get_batch_status(db, cnpjs)
-        logger.info(f"Upload de arquivo processado com sucesso: {len(cnpjs)} CNPJs")
+        logger.info(f"Upload de arquivo aceito com sucesso: {len(cnpjs)} CNPJs")
         return status
     
     except Exception as e:
@@ -58,6 +67,7 @@ async def upload_file(
 @router.post("/upload-cnpjs/", response_model=schemas.CNPJBatchStatus)
 async def upload_cnpjs(
     data: schemas.CNPJUpload,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     queue_manager: CNPJQueue = Depends(get_queue_manager),
     db: Session = Depends(get_db)
 ):
@@ -75,12 +85,20 @@ async def upload_cnpjs(
             logger.warning("Nenhum CNPJ válido fornecido")
             raise HTTPException(status_code=400, detail="Nenhum CNPJ válido fornecido.")
         
-        # Adiciona CNPJs à fila
-        await queue_manager.add_to_queue(valid_cnpjs)
+        # Adiciona CNPJs à fila em background
+        async def add_to_queue_background(cnpjs_list):
+            try:
+                await queue_manager.add_to_queue(cnpjs_list)
+                logger.info(f"Processamento em background concluído para {len(cnpjs_list)} CNPJs")
+            except Exception as e:
+                logger.error(f"Erro no processamento em background: {str(e)}")
         
-        # Retorna status
+        # Agenda o processamento em background
+        background_tasks.add_task(add_to_queue_background, valid_cnpjs)
+        
+        # Retorna status imediatamente
         status = get_batch_status(db, valid_cnpjs)
-        logger.info(f"Lista de CNPJs processada com sucesso: {len(valid_cnpjs)} válidos")
+        logger.info(f"Lista de CNPJs aceita com sucesso: {len(valid_cnpjs)} válidos")
         return status
     
     except Exception as e:
@@ -253,8 +271,8 @@ async def restart_queue_processing(
         except Exception as e:
             logger.error(f"Erro ao reiniciar processamento: {str(e)}")
     
-    # Inicia o processamento diretamente
-    asyncio.create_task(load_and_process())
+    # Agenda o processamento em background usando BackgroundTasks
+    background_tasks.add_task(load_and_process)
     
     return {"message": "Reinicialização do processamento iniciada"}
 
