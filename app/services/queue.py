@@ -1,22 +1,52 @@
 import asyncio
 import logging
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 import traceback
 import time
 
 from app.models.database import CNPJQuery, CNPJData
 from app.services.receitaws import ReceitaWSClient
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from app.config import MAX_RETRY_ATTEMPTS
 
 logger = logging.getLogger(__name__)
+
+# Singleton para o gerenciador de fila
+_queue_instance = None
+_queue_lock = asyncio.Lock()
 
 class CNPJQueue:
     """
     Gerenciador de fila para consultas de CNPJ
     """
+    
+    @classmethod
+    async def get_instance(cls, api_client: ReceitaWSClient, db: Session):
+        """
+        Obtém a instância singleton do gerenciador de fila
+        
+        Args:
+            api_client: Cliente da API ReceitaWS
+            db: Sessão do banco de dados
+            
+        Returns:
+            Instância do gerenciador de fila
+        """
+        global _queue_instance
+        
+        async with _queue_lock:
+            if _queue_instance is None:
+                _queue_instance = cls(api_client, db)
+                logger.info("Nova instância do gerenciador de fila criada")
+            else:
+                # Atualiza a sessão do banco de dados e o cliente da API
+                _queue_instance.db = db
+                _queue_instance.api_client = api_client
+                logger.debug("Instância existente do gerenciador de fila reutilizada")
+                
+        return _queue_instance
     
     def __init__(self, api_client: ReceitaWSClient, db: Session):
         """
@@ -30,6 +60,7 @@ class CNPJQueue:
         self.db = db
         self._queue = None
         self.processing = False
+        self._last_cleanup = datetime.utcnow()
         logger.info("Gerenciador de fila inicializado")
     
     @property
@@ -41,6 +72,51 @@ class CNPJQueue:
             self._queue = asyncio.Queue()
         return self._queue
     
+    async def cleanup_stuck_processing(self) -> int:
+        """
+        Limpa CNPJs que estão presos no status "processing" por muito tempo
+        
+        Returns:
+            Número de CNPJs redefinidos
+        """
+        try:
+            # Verifica se é hora de fazer a limpeza (a cada 5 minutos)
+            now = datetime.utcnow()
+            if (now - self._last_cleanup).total_seconds() < 300:  # 5 minutos
+                return 0
+                
+            self._last_cleanup = now
+            
+            # Encontra CNPJs que estão em "processing" por mais de 10 minutos
+            timeout_threshold = now - timedelta(minutes=10)
+            
+            stuck_queries = self.db.query(CNPJQuery).filter(
+                and_(
+                    CNPJQuery.status == "processing",
+                    CNPJQuery.updated_at < timeout_threshold
+                )
+            ).all()
+            
+            if not stuck_queries:
+                logger.debug("Nenhum CNPJ preso em processamento encontrado")
+                return 0
+            
+            # Redefine o status para "error"
+            count = 0
+            for query in stuck_queries:
+                query.status = "error"
+                query.error_message = "Processamento interrompido por timeout"
+                query.updated_at = now
+                count += 1
+            
+            self.db.commit()
+            logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
+            return count
+            
+        except Exception as e:
+            logger.error(f"Erro ao limpar CNPJs presos: {str(e)}")
+            return 0
+    
     async def load_pending_cnpjs(self) -> int:
         """
         Carrega CNPJs pendentes do banco de dados para a fila
@@ -51,6 +127,9 @@ class CNPJQueue:
         Returns:
             Número de CNPJs carregados
         """
+        # Limpa CNPJs presos em processamento
+        await self.cleanup_stuck_processing()
+        
         logger.info("Carregando CNPJs pendentes do banco de dados")
         
         # Busca CNPJs com status "queued" ou "processing"

@@ -133,7 +133,14 @@ async def delayed_queue_initialization(delay_seconds: float):
         
         # Cria instâncias necessárias
         api_client = ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
-        queue_manager = CNPJQueue(api_client=api_client, db=db)
+        
+        # Obtém a instância singleton do gerenciador de fila
+        queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
+        
+        # Executa limpeza de CNPJs presos em processamento
+        stuck_count = await queue_manager.cleanup_stuck_processing()
+        if stuck_count > 0:
+            logger.warning(f"Redefinidos {stuck_count} CNPJs presos em processamento durante a inicialização")
         
         # Define um timeout para a operação de carregamento
         try:

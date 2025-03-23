@@ -24,9 +24,9 @@ def get_api_client():
     return ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
 
 # Obtém instância do gerenciador de fila
-def get_queue_manager(db: Session = Depends(get_db), api_client: ReceitaWSClient = Depends(get_api_client)):
-    # Cria uma nova instância a cada requisição para evitar problemas com o event loop
-    return CNPJQueue(api_client=api_client, db=db)
+async def get_queue_manager(db: Session = Depends(get_db), api_client: ReceitaWSClient = Depends(get_api_client)):
+    # Usa o padrão Singleton para garantir que haja apenas uma instância do gerenciador de fila
+    return await CNPJQueue.get_instance(api_client=api_client, db=db)
 
 @router.post("/upload-file/", response_model=schemas.CNPJBatchStatus)
 async def upload_file(
@@ -260,8 +260,8 @@ async def restart_queue_processing(
     """
     logger.info("Reiniciando processamento da fila")
     
-    # Cria uma nova instância do gerenciador de fila
-    queue_manager = CNPJQueue(api_client=api_client, db=db)
+    # Obtém a instância singleton do gerenciador de fila
+    queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
     
     # Função para carregar CNPJs pendentes em background
     async def load_and_process():
