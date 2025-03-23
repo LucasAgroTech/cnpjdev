@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from app.api.endpoints import router as api_router
 from app.models.database import Base, engine
-from app.config import APP_NAME, APP_DESCRIPTION, APP_VERSION, DEBUG
+from app.config import APP_NAME, APP_DESCRIPTION, APP_VERSION, DEBUG, AUTO_RESTART_QUEUE, REQUESTS_PER_MINUTE
 
 # Configuração de logging
 logging.basicConfig(
@@ -102,6 +103,30 @@ async def startup_event():
     Evento executado na inicialização da aplicação
     """
     logger.info(f"{APP_NAME} v{APP_VERSION} iniciado com sucesso")
+    
+    # Carrega CNPJs pendentes e retoma o processamento se AUTO_RESTART_QUEUE estiver habilitado
+    if AUTO_RESTART_QUEUE:
+        try:
+            from app.models.database import get_db
+            from app.services.receitaws import ReceitaWSClient
+            from app.services.queue import CNPJQueue
+            
+            # Obtém uma sessão do banco de dados
+            db_generator = get_db()
+            db = next(db_generator)
+            
+            # Cria instâncias necessárias
+            api_client = ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
+            queue_manager = CNPJQueue(api_client=api_client, db=db)
+            
+            # Carrega CNPJs pendentes
+            asyncio.create_task(queue_manager.load_pending_cnpjs())
+            
+            logger.info("Verificação de CNPJs pendentes iniciada")
+        except Exception as e:
+            logger.error(f"Erro ao carregar CNPJs pendentes: {str(e)}")
+    else:
+        logger.info("Reinicialização automática da fila desabilitada (AUTO_RESTART_QUEUE=False)")
 
 @app.on_event("shutdown")
 async def shutdown_event():

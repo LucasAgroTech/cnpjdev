@@ -55,9 +55,19 @@ echo "Ativar modo de debug? (true/false, padrão: false):"
 read DEBUG
 DEBUG=${DEBUG:-false}
 
+echo "Reiniciar automaticamente a fila na inicialização? (true/false, padrão: true):"
+read AUTO_RESTART_QUEUE
+AUTO_RESTART_QUEUE=${AUTO_RESTART_QUEUE:-true}
+
+echo "Número máximo de tentativas para processar um CNPJ (padrão: 3):"
+read MAX_RETRY_ATTEMPTS
+MAX_RETRY_ATTEMPTS=${MAX_RETRY_ATTEMPTS:-3}
+
 # Configura as variáveis no Heroku
 heroku config:set --app $APP_NAME REQUESTS_PER_MINUTE=$REQUESTS_PER_MINUTE
 heroku config:set --app $APP_NAME DEBUG=$DEBUG
+heroku config:set --app $APP_NAME AUTO_RESTART_QUEUE=$AUTO_RESTART_QUEUE
+heroku config:set --app $APP_NAME MAX_RETRY_ATTEMPTS=$MAX_RETRY_ATTEMPTS
 
 # Faz o deploy
 echo "Fazendo deploy do código..."

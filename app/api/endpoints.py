@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import os
 import logging
 from datetime import datetime, timedelta
+import asyncio
 
 from app.models.database import get_db
 from app.models import schemas
@@ -129,6 +130,78 @@ def get_cnpj_data(
     
     logger.info(f"Dados do CNPJ {clean_cnpj} retornados com sucesso")
     return data
+
+# Cria um router separado para endpoints de administração
+admin_router = APIRouter(prefix="/admin", tags=["admin"])
+router.include_router(admin_router)
+
+@admin_router.get("/queue/status")
+async def get_queue_status(
+    db: Session = Depends(get_db)
+):
+    """
+    Obtém o status da fila de processamento
+    """
+    logger.info("Consultando status da fila de processamento")
+    
+    # Conta CNPJs por status
+    total_queued = db.query(CNPJQuery).filter(CNPJQuery.status == "queued").count()
+    total_processing = db.query(CNPJQuery).filter(CNPJQuery.status == "processing").count()
+    total_completed = db.query(CNPJQuery).filter(CNPJQuery.status == "completed").count()
+    total_error = db.query(CNPJQuery).filter(CNPJQuery.status == "error").count()
+    
+    # Obtém os 10 CNPJs mais recentes em processamento ou na fila
+    recent_pending = db.query(CNPJQuery).filter(
+        CNPJQuery.status.in_(["queued", "processing"])
+    ).order_by(CNPJQuery.created_at.desc()).limit(10).all()
+    
+    pending_cnpjs = [
+        {
+            "cnpj": query.cnpj,
+            "status": query.status,
+            "created_at": query.created_at.isoformat(),
+            "updated_at": query.updated_at.isoformat()
+        }
+        for query in recent_pending
+    ]
+    
+    return {
+        "queue_status": {
+            "queued": total_queued,
+            "processing": total_processing,
+            "completed": total_completed,
+            "error": total_error,
+            "total": total_queued + total_processing + total_completed + total_error
+        },
+        "recent_pending": pending_cnpjs
+    }
+
+@admin_router.post("/queue/restart")
+async def restart_queue_processing(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    api_client: ReceitaWSClient = Depends(get_api_client)
+):
+    """
+    Reinicia o processamento da fila de CNPJs pendentes
+    """
+    logger.info("Reiniciando processamento da fila")
+    
+    # Cria uma nova instância do gerenciador de fila
+    queue_manager = CNPJQueue(api_client=api_client, db=db)
+    
+    # Função para carregar CNPJs pendentes em background
+    async def load_and_process():
+        try:
+            count = await queue_manager.load_pending_cnpjs()
+            logger.info(f"Processamento reiniciado com {count} CNPJs pendentes")
+        except Exception as e:
+            logger.error(f"Erro ao reiniciar processamento: {str(e)}")
+    
+    # Inicia o processamento diretamente
+    asyncio.create_task(load_and_process())
+    
+    return {"message": "Reinicialização do processamento iniciada"}
 
 def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     """

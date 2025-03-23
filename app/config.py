@@ -18,3 +18,7 @@ APP_NAME: str = "CNPJ Consulta"
 APP_DESCRIPTION: str = "Sistema automatizado de consulta de CNPJs via API da ReceitaWS"
 APP_VERSION: str = "1.0.0"
 DEBUG: bool = os.environ.get("DEBUG", "False").lower() == "true"
+
+# Configuração de persistência
+AUTO_RESTART_QUEUE: bool = os.environ.get("AUTO_RESTART_QUEUE", "True").lower() == "true"
+MAX_RETRY_ATTEMPTS: int = int(os.environ.get("MAX_RETRY_ATTEMPTS", "3"))

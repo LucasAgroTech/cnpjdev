@@ -10,6 +10,9 @@ Sistema automatizado de consulta de CNPJs via API da ReceitaWS, com armazenament
 - Armazenamento dos resultados em PostgreSQL no Heroku
 - Interface web para acompanhamento das consultas
 - Status detalhado de cada consulta (sucesso/erro)
+- **Persistência de processamento**: retoma automaticamente de onde parou após reinicialização
+- **Mecanismo de retry**: tenta novamente em caso de falhas temporárias
+- **Endpoints de administração**: para monitorar e reiniciar o processamento
 
 ## Requisitos
 
@@ -139,3 +142,37 @@ cnpj-consulta/
 ## Limitações da API
 
 A API da ReceitaWS tem limite de 3 requisições por minuto. Este sistema está configurado para respeitar esse limite e evitar bloqueios, controlando a taxa de requisições.
+
+## Persistência de Processamento
+
+O sistema implementa um mecanismo de persistência que garante que o processamento de CNPJs continue mesmo após uma reinicialização do servidor (por exemplo, quando o dyno do Heroku é reiniciado).
+
+### Como funciona
+
+1. Quando a aplicação é iniciada, ela verifica no banco de dados se existem CNPJs com status "queued" ou "processing"
+2. Esses CNPJs são carregados na fila de processamento e o processamento é retomado automaticamente
+3. O sistema implementa um mecanismo de retry que tenta processar novamente CNPJs que falharam devido a erros temporários
+
+### Configurações de Persistência
+
+No arquivo `.env`, você pode configurar:
+
+- `AUTO_RESTART_QUEUE`: Define se o processamento deve ser retomado automaticamente na inicialização (padrão: True)
+- `MAX_RETRY_ATTEMPTS`: Número máximo de tentativas para processar um CNPJ em caso de falha (padrão: 3)
+
+### Endpoints de Administração
+
+O sistema oferece endpoints de administração para monitorar e controlar o processamento:
+
+- `GET /api/admin/queue/status`: Retorna o status atual da fila, incluindo contagem de CNPJs por status e lista dos 10 CNPJs pendentes mais recentes
+- `POST /api/admin/queue/restart`: Reinicia manualmente o processamento de CNPJs pendentes
+
+Exemplo de uso:
+
+```bash
+# Verificar status da fila
+curl http://localhost:8000/api/admin/queue/status
+
+# Reiniciar processamento
+curl -X POST http://localhost:8000/api/admin/queue/restart
+```
