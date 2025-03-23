@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CNPJ Consulta - Sistema de Consulta de CNPJs</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         .header {
             background-color: #f8f9fa;
@@ -113,10 +114,22 @@
                 <div class="card status-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Status das Consultas</h5>
-                        <button class="btn btn-sm btn-outline-secondary" id="refresh-status-btn">
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <span>Atualizar</span>
-                        </button>
+                        <div>
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-file-excel"></i> Exportar Excel
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="/api/export-excel/">Exportar Todos</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed">Apenas Concluídos</a></li>
+                                    <li><a class="dropdown-item" href="#" id="export-selected-btn">Selecionados</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" id="refresh-status-btn">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Atualizar</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
@@ -155,18 +168,19 @@
                         </div>
                         
                         <div class="cnpj-list">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>CNPJ</th>
-                                        <th>Status</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cnpj-status-list">
-                                    <!-- Será preenchido via JavaScript -->
-                                </tbody>
-                            </table>
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all-cnpjs" class="form-check-input"></th>
+                                <th>CNPJ</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cnpj-status-list">
+                            <!-- Será preenchido via JavaScript -->
+                        </tbody>
+                    </table>
                         </div>
                     </div>
                 </div>
@@ -268,6 +282,7 @@
                         
                         html += `
                             <tr>
+                                <td><input type="checkbox" class="form-check-input cnpj-checkbox" value="${result.cnpj}"></td>
                                 <td>${formattedCNPJ}</td>
                                 <td>${statusBadge}</td>
                                 <td>${viewBtn}</td>
@@ -282,6 +297,14 @@
                         btn.addEventListener('click', async function() {
                             const cnpj = this.getAttribute('data-cnpj');
                             await showResult(cnpj);
+                        });
+                    });
+                    
+                    // Configura o checkbox "selecionar todos"
+                    const selectAllCheckbox = document.getElementById('select-all-cnpjs');
+                    selectAllCheckbox.addEventListener('change', function() {
+                        document.querySelectorAll('.cnpj-checkbox').forEach(checkbox => {
+                            checkbox.checked = this.checked;
                         });
                     });
                 } catch (error) {
@@ -478,6 +501,24 @@
                     consultBtn.disabled = false;
                     document.getElementById('consult-btn-text').textContent = 'Consultar CNPJ';
                 }
+            });
+            
+            // Botão de exportar selecionados
+            document.getElementById('export-selected-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const selectedCnpjs = Array.from(document.querySelectorAll('.cnpj-checkbox:checked')).map(checkbox => checkbox.value);
+                
+                if (selectedCnpjs.length === 0) {
+                    alert('Selecione pelo menos um CNPJ para exportar.');
+                    return;
+                }
+                
+                // Cria a URL com os CNPJs selecionados
+                const url = '/api/export-excel/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
+                
+                // Abre a URL em uma nova aba
+                window.open(url, '_blank');
             });
             
             // Botão de atualização de status

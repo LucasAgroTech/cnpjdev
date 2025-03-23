@@ -13,6 +13,7 @@ Sistema automatizado de consulta de CNPJs via API da ReceitaWS, com armazenament
 - **Persistência de processamento**: retoma automaticamente de onde parou após reinicialização
 - **Mecanismo de retry**: tenta novamente em caso de falhas temporárias
 - **Endpoints de administração**: para monitorar e reiniciar o processamento
+- **Exportação para Excel**: permite baixar os resultados em formato Excel
 
 ## Requisitos
 
@@ -176,3 +177,30 @@ curl http://localhost:8000/api/admin/queue/status
 # Reiniciar processamento
 curl -X POST http://localhost:8000/api/admin/queue/restart
 ```
+
+## Exportação para Excel
+
+O sistema permite exportar os dados de CNPJs consultados para um arquivo Excel, facilitando a análise e o compartilhamento dos resultados.
+
+### Opções de Exportação
+
+A interface web oferece várias opções para exportação:
+
+- **Exportar Todos**: Exporta todos os CNPJs consultados
+- **Apenas Concluídos**: Exporta apenas os CNPJs com status "completed"
+- **Selecionados**: Exporta apenas os CNPJs selecionados na tabela
+
+### Endpoint de API
+
+O endpoint de exportação para Excel também pode ser acessado diretamente:
+
+- `GET /api/export-excel/`: Exporta todos os CNPJs
+- `GET /api/export-excel/?status=completed`: Exporta apenas CNPJs com status "completed"
+- `GET /api/export-excel/?cnpjs=00000000000000&cnpjs=11111111111111`: Exporta CNPJs específicos
+
+O arquivo Excel gerado contém todas as informações disponíveis para cada CNPJ, incluindo:
+- Dados cadastrais (Razão Social, Nome Fantasia)
+- Endereço completo
+- Contatos (Email, Telefone)
+- Informações sobre Simples Nacional
+- Data da consulta

@@ -3,6 +3,7 @@ from fastapi import UploadFile, HTTPException
 from typing import List
 import io
 import logging
+from app.models.database import CNPJData
 
 logger = logging.getLogger(__name__)
 
@@ -98,3 +99,57 @@ async def read_excel(file: UploadFile) -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Erro ao ler arquivo Excel: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Erro ao ler arquivo Excel: {str(e)}")
+
+def generate_cnpj_excel(cnpj_data_list: List[CNPJData]) -> bytes:
+    """
+    Gera um arquivo Excel a partir de uma lista de dados de CNPJ
+    
+    Args:
+        cnpj_data_list: Lista de objetos CNPJData
+        
+    Returns:
+        Conteúdo do arquivo Excel em bytes
+    """
+    logger.info(f"Gerando Excel com {len(cnpj_data_list)} CNPJs")
+    
+    # Cria um DataFrame com os dados
+    data = []
+    for cnpj_data in cnpj_data_list:
+        data.append({
+            'CNPJ': cnpj_data.cnpj,
+            'Razão Social': cnpj_data.company_name,
+            'Nome Fantasia': cnpj_data.trade_name,
+            'Situação': cnpj_data.status,
+            'Endereço': cnpj_data.address,
+            'Cidade': cnpj_data.city,
+            'Estado': cnpj_data.state,
+            'CEP': cnpj_data.zip_code,
+            'Email': cnpj_data.email,
+            'Telefone': cnpj_data.phone,
+            'Simples Nacional': 'Sim' if cnpj_data.simples_nacional else 'Não',
+            'Data de Opção Simples': cnpj_data.simples_nacional_date,
+            'Data de Consulta': cnpj_data.updated_at
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Cria um buffer para o Excel
+    output = io.BytesIO()
+    
+    try:
+        # Salva o DataFrame como Excel no buffer
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, sheet_name='CNPJs', index=False)
+            
+            # Ajusta largura das colunas
+            worksheet = writer.sheets['CNPJs']
+            for i, col in enumerate(df.columns):
+                max_width = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                worksheet.set_column(i, i, max_width)
+        
+        # Retorna o conteúdo do buffer
+        output.seek(0)
+        return output.getvalue()
+    except Exception as e:
+        logger.error(f"Erro ao gerar Excel: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar Excel: {str(e)}")

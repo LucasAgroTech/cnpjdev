@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 import os
@@ -11,7 +12,7 @@ from app.models import schemas
 from app.models.database import CNPJQuery, CNPJData
 from app.services.receitaws import ReceitaWSClient
 from app.services.queue import CNPJQueue
-from app.utils.file_handler import process_cnpj_file
+from app.utils.file_handler import process_cnpj_file, generate_cnpj_excel
 from app.config import REQUESTS_PER_MINUTE
 
 logger = logging.getLogger(__name__)
@@ -130,6 +131,60 @@ def get_cnpj_data(
     
     logger.info(f"Dados do CNPJ {clean_cnpj} retornados com sucesso")
     return data
+
+@router.get("/export-excel/", response_class=Response)
+def export_excel(
+    cnpjs: List[str] = Query(None),
+    status: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporta dados de CNPJs para Excel
+    
+    Se nenhum CNPJ for especificado, exporta todos os CNPJs consultados.
+    Opcionalmente, pode-se filtrar por status.
+    """
+    logger.info("Exportando dados para Excel")
+    
+    # Consulta os dados no banco
+    query = db.query(CNPJData)
+    
+    # Filtra por CNPJs específicos se fornecidos
+    if cnpjs:
+        # Limpa CNPJs
+        clean_cnpjs = [''.join(filter(str.isdigit, cnpj)) for cnpj in cnpjs]
+        query = query.filter(CNPJData.cnpj.in_(clean_cnpjs))
+    
+    # Filtra por status se fornecido
+    if status:
+        # Obtém os CNPJs com o status especificado
+        cnpj_queries = db.query(CNPJQuery.cnpj).filter(CNPJQuery.status == status).distinct().all()
+        status_cnpjs = [q.cnpj for q in cnpj_queries]
+        
+        if status_cnpjs:
+            query = query.filter(CNPJData.cnpj.in_(status_cnpjs))
+        else:
+            # Se não houver CNPJs com o status especificado, retorna vazio
+            raise HTTPException(status_code=404, detail=f"Nenhum CNPJ com status '{status}' encontrado.")
+    
+    # Executa a consulta
+    cnpj_data_list = query.all()
+    
+    if not cnpj_data_list:
+        raise HTTPException(status_code=404, detail="Nenhum dado de CNPJ encontrado.")
+    
+    # Gera o Excel
+    excel_data = generate_cnpj_excel(cnpj_data_list)
+    
+    # Define o nome do arquivo com a data atual
+    filename = f"cnpjs_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    # Retorna o arquivo para download
+    return Response(
+        content=excel_data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 # Cria um router separado para endpoints de administração
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
