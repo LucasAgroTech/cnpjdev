@@ -285,7 +285,7 @@ async def reset_error_cnpjs(
     """
     Reseta CNPJs com status de erro para 'queued' e reinicia o processamento
     """
-    logger.info("Resetando CNPJs com erro para a fila")
+    logger.info("Resetando CNPJs com status de erro para a fila")
     
     # Encontra todos os CNPJs com status 'error'
     error_queries = db.query(CNPJQuery).filter(CNPJQuery.status == "error").all()
