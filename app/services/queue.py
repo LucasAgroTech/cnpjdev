@@ -6,7 +6,7 @@ import traceback
 import time
 
 from app.models.database import CNPJQuery, CNPJData
-from app.services.receitaws import ReceitaWSClient
+from app.services.api_manager import APIManager
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from app.config import MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE
@@ -30,12 +30,12 @@ class CNPJQueue:
     """
     
     @classmethod
-    async def get_instance(cls, api_client: ReceitaWSClient, db: Session):
+    async def get_instance(cls, api_client: APIManager, db: Session):
         """
         Obtém a instância singleton do gerenciador de fila
         
         Args:
-            api_client: Cliente da API ReceitaWS
+            api_client: Gerenciador de APIs para consulta de CNPJ
             db: Sessão do banco de dados
             
         Returns:
@@ -55,12 +55,12 @@ class CNPJQueue:
                 
         return _queue_instance
     
-    def __init__(self, api_client: ReceitaWSClient, db: Session):
+    def __init__(self, api_client: APIManager, db: Session):
         """
         Inicializa o gerenciador de fila
         
         Args:
-            api_client: Cliente da API ReceitaWS
+            api_client: Gerenciador de APIs para consulta de CNPJ
             db: Sessão do banco de dados
         """
         self.api_client = api_client
@@ -396,7 +396,7 @@ class CNPJQueue:
                     
                     # Consulta a API com timeout
                     logger.info(f"Processando CNPJ: {cnpj}")
-                    result = await self.api_client.query_cnpj(cnpj, include_simples=True)
+                    result, api_used = await self.api_client.query_cnpj(cnpj, include_simples=True)
                     
                     # Extrai dados relevantes
                     company_name = result.get("company", {}).get("name", "")
@@ -427,6 +427,9 @@ class CNPJQueue:
                             simples_nacional_date = datetime.strptime(simples_data.get("since"), "%Y-%m-%d")
                         except:
                             pass
+                    
+                    # Adiciona informação sobre qual API foi usada
+                    result["api_used"] = api_used
                     
                     # Salva no banco de dados
                     cnpj_data = self.db.query(CNPJData).filter(CNPJData.cnpj == cnpj).first()

@@ -9,7 +9,10 @@ from fastapi.responses import HTMLResponse
 
 from app.api.endpoints import router as api_router
 from app.models.database import Base, engine
-from app.config import APP_NAME, APP_DESCRIPTION, APP_VERSION, DEBUG, AUTO_RESTART_QUEUE, REQUESTS_PER_MINUTE
+from app.config import (
+    APP_NAME, APP_DESCRIPTION, APP_VERSION, DEBUG, AUTO_RESTART_QUEUE,
+    RECEITAWS_ENABLED, CNPJWS_ENABLED, RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE
+)
 
 # Configuração de logging
 logging.basicConfig(
@@ -124,7 +127,7 @@ async def delayed_queue_initialization(delay_seconds: float):
         await asyncio.sleep(delay_seconds)
         
         from app.models.database import get_db
-        from app.services.receitaws import ReceitaWSClient
+        from app.services.api_manager import APIManager
         from app.services.queue import CNPJQueue
         
         # Obtém uma sessão do banco de dados
@@ -132,7 +135,12 @@ async def delayed_queue_initialization(delay_seconds: float):
         db = next(db_generator)
         
         # Cria instâncias necessárias
-        api_client = ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
+        api_client = APIManager(
+            receitaws_enabled=RECEITAWS_ENABLED,
+            cnpjws_enabled=CNPJWS_ENABLED,
+            receitaws_requests_per_minute=RECEITAWS_REQUESTS_PER_MINUTE,
+            cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE
+        )
         
         # Obtém a instância singleton do gerenciador de fila
         queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)

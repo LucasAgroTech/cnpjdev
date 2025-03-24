@@ -5,7 +5,13 @@ from dotenv import load_dotenv
 # Carrega variáveis de ambiente
 load_dotenv()
 
-# Configuração da API
+# Configuração das APIs
+RECEITAWS_ENABLED: bool = os.environ.get("RECEITAWS_ENABLED", "True").lower() == "true"
+CNPJWS_ENABLED: bool = os.environ.get("CNPJWS_ENABLED", "True").lower() == "true"
+RECEITAWS_REQUESTS_PER_MINUTE: int = int(os.environ.get("RECEITAWS_REQUESTS_PER_MINUTE", "3"))
+CNPJWS_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJWS_REQUESTS_PER_MINUTE", "3"))
+
+# Mantém para compatibilidade
 REQUESTS_PER_MINUTE: int = int(os.environ.get("REQUESTS_PER_MINUTE", "3"))
 
 # Configuração do banco de dados

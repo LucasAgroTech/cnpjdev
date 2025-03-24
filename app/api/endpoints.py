@@ -10,21 +10,29 @@ import asyncio
 from app.models.database import get_db
 from app.models import schemas
 from app.models.database import CNPJQuery, CNPJData
-from app.services.receitaws import ReceitaWSClient
+from app.services.api_manager import APIManager
 from app.services.queue import CNPJQueue
 from app.utils.file_handler import process_cnpj_file, generate_cnpj_excel
-from app.config import REQUESTS_PER_MINUTE
+from app.config import (
+    RECEITAWS_ENABLED, CNPJWS_ENABLED, 
+    RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Obtém instância do cliente ReceitaWS
+# Obtém instância do gerenciador de APIs
 def get_api_client():
-    return ReceitaWSClient(requests_per_minute=REQUESTS_PER_MINUTE)
+    return APIManager(
+        receitaws_enabled=RECEITAWS_ENABLED,
+        cnpjws_enabled=CNPJWS_ENABLED,
+        receitaws_requests_per_minute=RECEITAWS_REQUESTS_PER_MINUTE,
+        cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE
+    )
 
 # Obtém instância do gerenciador de fila
-async def get_queue_manager(db: Session = Depends(get_db), api_client: ReceitaWSClient = Depends(get_api_client)):
+async def get_queue_manager(db: Session = Depends(get_db), api_client: APIManager = Depends(get_api_client)):
     # Usa o padrão Singleton para garantir que haja apenas uma instância do gerenciador de fila
     return await CNPJQueue.get_instance(api_client=api_client, db=db)
 
@@ -255,7 +263,7 @@ async def get_queue_status(
 async def restart_queue_processing(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    api_client: ReceitaWSClient = Depends(get_api_client)
+    api_client: APIManager = Depends(get_api_client)
 ):
     """
     Reinicia o processamento da fila de CNPJs pendentes
@@ -282,7 +290,7 @@ async def restart_queue_processing(
 async def reset_error_cnpjs(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    api_client: ReceitaWSClient = Depends(get_api_client)
+    api_client: APIManager = Depends(get_api_client)
 ):
     """
     Reseta CNPJs com status de erro para 'queued' e reinicia o processamento
@@ -327,7 +335,7 @@ async def reset_error_cnpjs(
 async def reset_rate_limited_cnpjs(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    api_client: ReceitaWSClient = Depends(get_api_client)
+    api_client: APIManager = Depends(get_api_client)
 ):
     """
     Reseta CNPJs com status de limite de requisições excedido para 'queued' e reinicia o processamento
@@ -372,7 +380,7 @@ async def reset_rate_limited_cnpjs(
 async def reset_all_pending_cnpjs(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    api_client: ReceitaWSClient = Depends(get_api_client)
+    api_client: APIManager = Depends(get_api_client)
 ):
     """
     Reseta todos os CNPJs pendentes (erro e limite de requisições) para 'queued' e reinicia o processamento
