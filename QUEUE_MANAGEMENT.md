@@ -107,6 +107,12 @@ python3 fix_error_cnpjs.py --verbose
 python3 fix_error_cnpjs.py --no-restart
 ```
 
+**Exemplo para o Heroku:**
+```
+# Para o banco de dados do Heroku
+python3 fix_error_cnpjs.py --db-url postgres://usuario:senha@host:porta/nome_banco --api-url https://seu-app.herokuapp.com
+```
+
 Este script é a maneira recomendada para lidar com CNPJs que falharam durante o processamento, pois conecta-se diretamente ao banco de dados e não depende de endpoints da API.
 
 ### 4. Script de Atualização (`deploy_update.sh`)
