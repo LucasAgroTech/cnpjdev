@@ -36,26 +36,11 @@ class ReceitaWSClient:
             True se uma requisição pode ser feita, False caso contrário
         """
         now = time.time()
-        
         # Remove timestamps mais antigos que 60 segundos
         self.request_timestamps = [ts for ts in self.request_timestamps if now - ts < 60]
         
         # Verifica se pode fazer uma requisição
-        if len(self.request_timestamps) >= self.requests_per_minute:
-            return False
-        
-        # Se houver timestamps, verifica o intervalo desde a última requisição
-        if self.request_timestamps:
-            last_request = max(self.request_timestamps)
-            min_interval = 60.0 / self.requests_per_minute
-            time_since_last = now - last_request
-            
-            # Garante um intervalo mínimo entre requisições para evitar throttling
-            if time_since_last < min_interval * 0.9:  # 90% do intervalo mínimo
-                logger.debug(f"Muito cedo para nova requisição. Intervalo desde última: {time_since_last:.2f}s, mínimo recomendado: {min_interval:.2f}s")
-                return False
-        
-        return True
+        return len(self.request_timestamps) < self.requests_per_minute
     
     async def _make_request(self, cnpj: str) -> Dict[str, Any]:
         """
@@ -120,27 +105,10 @@ class ReceitaWSClient:
         
         # Verifica se pode fazer uma requisição
         if not self._can_make_request():
-            # Verifica quanto tempo precisa esperar
-            now = time.time()
-            wait_time = 0
-            
-            if self.request_timestamps:
-                # Se o número máximo de requisições foi atingido, calcula quanto tempo
-                # falta para a requisição mais antiga sair da janela de 60 segundos
-                if len(self.request_timestamps) >= self.requests_per_minute:
-                    oldest = min(self.request_timestamps)
-                    wait_time = max(60 - (now - oldest) + 0.1, 0.1)
-                
-                # Verifica também o intervalo desde a última requisição
-                last = max(self.request_timestamps)
-                min_interval = 60.0 / self.requests_per_minute
-                time_since_last = now - last
-                if time_since_last < min_interval:
-                    interval_wait = min_interval - time_since_last + 0.1
-                    wait_time = max(wait_time, interval_wait)
-            
-            logger.debug(f"Limite de taxa atingido para CNPJ {cnpj_clean}. Aguardando {wait_time:.2f} segundos...")
-            await asyncio.sleep(wait_time)
+            # Aguarda até que possa fazer uma requisição
+            wait_time = 60 - (time.time() - min(self.request_timestamps))
+            logger.debug(f"Limite de taxa atingido. Aguardando {wait_time:.2f} segundos...")
+            await asyncio.sleep(wait_time + 1)  # Adiciona 1 segundo extra por segurança
         
         # Adiciona timeout para toda a operação
         try:
