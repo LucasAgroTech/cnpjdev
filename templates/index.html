@@ -22,8 +22,8 @@
             --surface: #0f2940;
             --surface-dark: #0d2338;
             --surface-light: #1a3c5c;
-            --text: #e2f3f8;
-            --text-secondary: #9cb5c8;
+            --text: #ffffff;
+            --text-secondary: #b8d1e8;
             --border: #1e4976;
             --warning: #ffb648;
             --danger: #ff4757;
@@ -384,26 +384,28 @@
 
         .table {
             margin-bottom: 0;
-            color: var(--text);
+            color: white;
         }
 
         .table thead th {
             background-color: var(--surface);
             color: var(--primary);
-            font-weight: 600;
+            font-weight: 700;
             font-family: 'Orbitron', sans-serif;
             font-size: 0.85rem;
             letter-spacing: 1px;
             text-transform: uppercase;
             border-bottom: 1px solid var(--border);
             padding: 0.75rem 1rem;
+            text-shadow: 0 0 2px rgba(13, 242, 201, 0.5);
         }
 
         .table tbody td {
-            color: var(--text);
+            color: white;
             border-top: 1px solid var(--border);
             padding: 0.75rem 1rem;
             font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
         }
 
         .table-hover tbody tr {
@@ -411,7 +413,7 @@
         }
 
         .table-hover tbody tr:hover {
-            background-color: rgba(13, 242, 201, 0.05);
+            background-color: rgba(13, 242, 201, 0.15);
         }
 
         .form-control {
@@ -738,7 +740,7 @@
                             <div class="mb-3" id="selected-file-container" style="display: none;">
                                 <div class="d-flex align-items-center p-3 bg-surface-dark rounded">
                                     <i class="bi bi-file-earmark-binary me-3 text-primary" style="font-size: 1.5rem;"></i>
-                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate"></span>
+                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate text-white"></span>
                                     <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-file-btn">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
@@ -823,7 +825,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="card stat-card" style="background: rgba(255, 182, 72, 0.1);">
                                     <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">EM PROCESSO</h6>
+                                        <h6 class="card-subtitle mb-1">PROCESSANDO</h6>
                                         <p class="card-text" style="color: var(--warning);" id="processing-count">0</p>
                                     </div>
                                 </div>
@@ -1011,7 +1013,7 @@
                     // Célula do CNPJ
                     const tdCnpj = document.createElement('td');
                     const span = document.createElement('span');
-                    span.className = 'fw-medium';
+                    span.className = 'fw-bold text-white';
                     span.textContent = formattedCNPJ;
                     tdCnpj.appendChild(span);
                     
