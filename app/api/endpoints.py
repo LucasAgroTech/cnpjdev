@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 import os
 import logging
@@ -425,54 +426,104 @@ async def reset_all_pending_cnpjs(
     
     return {"message": f"{count} CNPJs pendentes resetados para a fila", "count": count}
 
+@admin_router.post("/cleanup/duplicates")
+async def cleanup_duplicates(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Remove CNPJs duplicados do banco de dados
+    """
+    logger.info("Iniciando limpeza de CNPJs duplicados")
+    
+    # Função para executar a limpeza em background
+    async def run_cleanup():
+        try:
+            # Limpa duplicados na tabela CNPJQuery
+            logger.info("Limpando duplicados na tabela de consultas...")
+            
+            # Encontra CNPJs com múltiplas entradas
+            duplicates_query = db.query(CNPJQuery.cnpj, func.count(CNPJQuery.id).label('count')) \
+                              .group_by(CNPJQuery.cnpj) \
+                              .having(func.count(CNPJQuery.id) > 1) \
+                              .all()
+            
+            query_count = 0
+            for cnpj, count in duplicates_query:
+                # Para cada CNPJ duplicado, mantém apenas a entrada mais recente
+                entries = db.query(CNPJQuery) \
+                           .filter(CNPJQuery.cnpj == cnpj) \
+                           .order_by(CNPJQuery.updated_at.desc()) \
+                           .all()
+                
+                # Mantém o primeiro (mais recente) e remove os demais
+                for entry in entries[1:]:
+                    db.delete(entry)
+                    query_count += 1
+            
+            # Limpa duplicados na tabela CNPJData
+            logger.info("Limpando duplicados na tabela de dados...")
+            
+            # Encontra CNPJs com múltiplas entradas
+            duplicates_data = db.query(CNPJData.cnpj, func.count(CNPJData.id).label('count')) \
+                             .group_by(CNPJData.cnpj) \
+                             .having(func.count(CNPJData.id) > 1) \
+                             .all()
+            
+            data_count = 0
+            for cnpj, count in duplicates_data:
+                # Para cada CNPJ duplicado, mantém apenas a entrada mais recente
+                entries = db.query(CNPJData) \
+                           .filter(CNPJData.cnpj == cnpj) \
+                           .order_by(CNPJData.updated_at.desc()) \
+                           .all()
+                
+                # Mantém o primeiro (mais recente) e remove os demais
+                for entry in entries[1:]:
+                    db.delete(entry)
+                    data_count += 1
+            
+            db.commit()
+            logger.info(f"Limpeza concluída: Removidas {query_count} consultas duplicadas e {data_count} dados duplicados")
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro na limpeza de duplicados: {str(e)}")
+    
+    # Agenda a limpeza para ser executada em background
+    background_tasks.add_task(run_cleanup)
+    
+    return {"message": "Limpeza de CNPJs duplicados iniciada em background"}
+
 def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     """
     Obtém status de lote para uma lista de CNPJs
     """
     statuses = []
-    
-    # Contadores para cada status
+    total = len(cnpjs)
     completed = 0
     processing = 0
     error = 0
     queued = 0
     rate_limited = 0
     
-    # Dicionário para armazenar o status mais recente de cada CNPJ para exibição
-    latest_status = {}
-    
-    # Busca todas as consultas para os CNPJs fornecidos
-    all_queries = db.query(CNPJQuery).filter(CNPJQuery.cnpj.in_(cnpjs)).all()
-    
-    # Conta o total de consultas (pode ser maior que o número de CNPJs únicos)
-    total = len(all_queries)
-    
-    # Conta cada consulta por status
-    for query in all_queries:
-        if query.status == "completed":
-            completed += 1
-        elif query.status == "processing":
-            processing += 1
-        elif query.status == "error":
-            error += 1
-        elif query.status == "queued":
-            queued += 1
-        elif query.status == "rate_limited":
-            rate_limited += 1
-            
-        # Armazena o status mais recente para cada CNPJ
-        if query.cnpj not in latest_status or query.created_at > latest_status[query.cnpj]['created_at']:
-            latest_status[query.cnpj] = {
-                'status': query.status,
-                'error_message': query.error_message,
-                'created_at': query.created_at
-            }
-    
-    # Cria a lista de status para cada CNPJ único
     for cnpj in cnpjs:
-        if cnpj in latest_status:
-            status = latest_status[cnpj]['status']
-            error_message = latest_status[cnpj]['error_message']
+        query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
+        
+        if query:
+            status = query.status
+            error_message = query.error_message
+            
+            if status == "completed":
+                completed += 1
+            elif status == "processing":
+                processing += 1
+            elif status == "error":
+                error += 1
+            elif status == "queued":
+                queued += 1
+            elif status == "rate_limited":
+                rate_limited += 1
         else:
             status = "unknown"
             error_message = None
