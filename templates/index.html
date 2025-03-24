@@ -6,481 +6,181 @@
     <title>CNPJ Consulta - Sistema de Consulta de CNPJs</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --secondary: #10b981;
-            --secondary-dark: #059669;
-            --dark: #1e293b;
-            --light: #f8fafc;
-            --gray-light: #e2e8f0;
-            --gray: #94a3b8;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-            --gradient-start: #3b82f6;
-            --gradient-end: #10b981;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --border-radius: 0.5rem;
-            --border-radius-lg: 0.75rem;
-            --transition: all 0.2s ease-in-out;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #f3f4f6;
-            color: var(--dark);
-            line-height: 1.6;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-            font-weight: 600;
-        }
-
         .header {
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            padding: 2.5rem 0;
+            background-color: #f8f9fa;
+            padding: 2rem 0;
             margin-bottom: 2rem;
-            border-bottom: none;
-            box-shadow: var(--shadow-md);
-            color: white;
+            border-bottom: 1px solid #dee2e6;
         }
-
-        .header h1 {
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .header .lead {
-            opacity: 0.9;
-            font-weight: 400;
-        }
-
-        .card {
-            border: none;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-            transition: var(--transition);
-            overflow: hidden;
-        }
-
-        .card:hover {
-            box-shadow: var(--shadow-md);
-        }
-
-        .card-header {
-            background-color: white;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 1.25rem 1.5rem;
-        }
-
-        .card-body {
-            padding: 1.5rem;
-        }
-
         .file-upload-container {
-            border: 2px dashed var(--gray-light);
-            border-radius: var(--border-radius);
-            padding: 2.5rem 1.5rem;
+            border: 2px dashed #dee2e6;
+            border-radius: 5px;
+            padding: 2rem;
             text-align: center;
             margin-bottom: 1.5rem;
-            background-color: var(--light);
-            transition: var(--transition);
+            background-color: #f8f9fa;
         }
-
         .file-upload-container:hover {
-            border-color: var(--primary);
-            background-color: rgba(59, 130, 246, 0.04);
+            border-color: #adb5bd;
+            background-color: #f1f3f5;
             cursor: pointer;
-            transform: translateY(-2px);
         }
-
         .status-card {
             margin-bottom: 1.5rem;
         }
-
-        .btn {
-            font-weight: 500;
-            padding: 0.5rem 1.25rem;
-            border-radius: 0.5rem;
-            transition: var(--transition);
-            text-transform: none;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            border-color: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-success {
-            background-color: var(--secondary);
-            border-color: var(--secondary);
-        }
-
-        .btn-success:hover {
-            background-color: var(--secondary-dark);
-            border-color: var(--secondary-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-primary {
-            color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-outline-primary:hover {
-            background-color: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-
-        .btn-outline-danger:hover {
-            transform: translateY(-1px);
-        }
-
         .spinner-border {
             display: none;
-            width: 1rem;
-            height: 1rem;
         }
-
         .processing .spinner-border {
             display: inline-block;
         }
-
         .status-badge {
-            font-size: 0.8em;
+            font-size: 0.9em;
             padding: 0.35em 0.65em;
-            border-radius: 50rem;
-            font-weight: 500;
         }
-
-        .bg-success {
-            background-color: var(--secondary) !important;
-        }
-
-        .bg-warning {
-            background-color: var(--warning) !important;
-        }
-
-        .bg-danger {
-            background-color: var(--danger) !important;
-        }
-
-        .bg-info {
-            background-color: var(--info) !important;
-        }
-
         .cnpj-list {
             max-height: 400px;
             overflow-y: auto;
-            border-radius: var(--border-radius);
-            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.05);
         }
-
-        .cnpj-list::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .cnpj-list::-webkit-scrollbar-track {
-            background: var(--light);
-        }
-
-        .cnpj-list::-webkit-scrollbar-thumb {
-            background-color: var(--gray);
-            border-radius: 20px;
-        }
-
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table thead th {
-            font-weight: 600;
-            color: var(--dark);
-            background-color: rgba(0, 0, 0, 0.02);
-        }
-
-        .table-hover tbody tr {
-            transition: var(--transition);
-        }
-
-        .table-hover tbody tr:hover {
-            background-color: rgba(59, 130, 246, 0.04);
-        }
-
-        .form-control {
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--gray-light);
-            font-size: 0.95rem;
-            box-shadow: none;
-            transition: var(--transition);
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-        }
-
-        .form-check-input {
-            cursor: pointer;
-        }
-
-        .form-check-input:checked {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .stat-card {
-            border-radius: var(--border-radius);
-            transition: var(--transition);
-            overflow: hidden;
-            height: 100%;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .stat-card .card-body {
-            padding: 1.25rem;
-        }
-
-        .stat-card h6 {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--gray);
-        }
-
-        .stat-card .card-text {
-            font-weight: 700;
-            margin-bottom: 0;
-            color: var(--dark);
-        }
-
         .footer {
-            margin-top: 3rem;
-            padding: 1.5rem 0;
-            background-color: var(--dark);
-            border-top: none;
-            color: white;
-        }
-
-        .modal-content {
-            border: none;
-            border-radius: var(--border-radius-lg);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-        }
-
-        .modal-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            background-color: white;
-            padding: 1.25rem 1.5rem;
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-        }
-
-        .modal-footer {
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 1.25rem 1.5rem;
-        }
-
-        pre {
+            margin-top: 2rem;
+            padding: 1rem 0;
             background-color: #f8f9fa;
-            border-radius: var(--border-radius);
-            font-size: 0.875rem;
-        }
-
-        /* Removendo animações pesadas para melhorar performance */
-
-        /* Responsividade */
-        @media (max-width: 768px) {
-            .header {
-                padding: 2rem 0;
-            }
-            
-            .card-header {
-                padding: 1rem 1.25rem;
-            }
-            
-            .card-body {
-                padding: 1.25rem;
-            }
-            
-            .file-upload-container {
-                padding: 2rem 1rem;
-            }
-            
-            .btn {
-                padding: 0.5rem 1rem;
-            }
+            border-top: 1px solid #dee2e6;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="container">
-            <h1 class="mb-0"><i class="bi bi-building"></i> CNPJ Consulta</h1>
+            <h1 class="mb-0">CNPJ Consulta</h1>
             <p class="lead">Sistema automatizado de consulta de CNPJs via API da ReceitaWS</p>
         </div>
     </div>
 
-    <div class="container mb-5">
-        <div class="row g-4">
-            <div class="col-lg-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-cloud-upload me-2"></i>Upload de Arquivo</h5>
+                        <h5 class="card-title mb-0">Upload de Arquivo</h5>
                     </div>
                     <div class="card-body">
                         <form id="upload-form" enctype="multipart/form-data">
                             <div class="mb-3 file-upload-container" id="drop-zone">
-                                <div class="mb-3">
-                                    <i class="bi bi-file-earmark-arrow-up" style="font-size: 2.5rem; color: var(--primary);"></i>
-                                </div>
+                                <img src="https://cdn-icons-png.flaticon.com/512/337/337946.png" width="50" class="mb-3">
                                 <h5>Arraste e solte um arquivo aqui</h5>
                                 <p class="text-muted">ou</p>
                                 <input type="file" id="file-input" class="d-none" accept=".csv,.xls,.xlsx">
-                                <button type="button" class="btn btn-primary" id="select-file-btn">
-                                    <i class="bi bi-folder me-2"></i>Selecionar Arquivo
-                                </button>
-                                <p class="mt-3 text-muted small">Formatos suportados: CSV, XLS, XLSX</p>
+                                <button type="button" class="btn btn-primary" id="select-file-btn">Selecionar Arquivo</button>
+                                <p class="mt-2 text-muted small">Formatos suportados: CSV, XLS, XLSX</p>
                             </div>
                             <div class="mb-3" id="selected-file-container" style="display: none;">
-                                <div class="d-flex align-items-center p-3 bg-light rounded">
-                                    <i class="bi bi-file-earmark-text me-3 text-primary" style="font-size: 1.5rem;"></i>
-                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate"></span>
-                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-file-btn">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
+                                <div class="d-flex align-items-center">
+                                    <span id="selected-file-name" class="me-auto"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="remove-file-btn">Remover</button>
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-success w-100" id="upload-btn">
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span id="upload-btn-text"><i class="bi bi-upload me-2"></i>Enviar Arquivo</span>
+                                <span id="upload-btn-text">Enviar Arquivo</span>
                             </button>
                         </form>
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-search me-2"></i>Consulta Manual</h5>
+                        <h5 class="card-title mb-0">Consulta Manual</h5>
                     </div>
                     <div class="card-body">
                         <form id="manual-form">
                             <div class="mb-3">
-                                <label for="cnpj-input" class="form-label fw-medium">CNPJ</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
-                                    <input type="text" class="form-control" id="cnpj-input" placeholder="00.000.000/0000-00">
-                                </div>
-                                <div class="form-text">Digite um CNPJ para consultar individualmente</div>
+                                <label for="cnpj-input" class="form-label">CNPJ</label>
+                                <input type="text" class="form-control" id="cnpj-input" placeholder="00.000.000/0000-00">
+                                <div class="form-text">Digite um CNPJ para consultar</div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100" id="consult-btn">
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span id="consult-btn-text"><i class="bi bi-search me-2"></i>Consultar CNPJ</span>
+                                <span id="consult-btn-text">Consultar CNPJ</span>
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-7">
+            <div class="col-md-6">
                 <div class="card status-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0"><i class="bi bi-list-check me-2"></i>Status das Consultas</h5>
+                        <h5 class="card-title mb-0">Status das Consultas</h5>
                         <div>
-                            <div class="dropdown d-inline-block me-2">
+                            <div class="dropdown d-inline-block">
                                 <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-file-excel me-1"></i> Exportar
+                                    <i class="bi bi-file-excel"></i> Exportar Excel
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
-                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Todos</a></li>
-                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Apenas Concluídos</a></li>
-                                    <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Selecionados</a></li>
+                                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="/api/export-excel/">Exportar Todos</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed">Apenas Concluídos</a></li>
+                                    <li><a class="dropdown-item" href="#" id="export-selected-btn">Selecionados</a></li>
                                 </ul>
                             </div>
-                            <button class="btn btn-sm btn-outline-primary" id="refresh-status-btn">
+                            <button class="btn btn-sm btn-outline-secondary" id="refresh-status-btn">
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+                                <span>Atualizar</span>
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row g-3 mb-4">
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card bg-light">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Total</h6>
-                                        <p class="card-text fs-4 fw-bold text-dark" id="total-count">0</p>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center py-2">
+                                        <h6 class="card-title mb-0">Total</h6>
+                                        <p class="card-text fs-4 fw-bold" id="total-count">0</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background-color: rgba(16, 185, 129, 0.15);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Concluídas</h6>
-                                        <p class="card-text fs-4 fw-bold" style="color: #059669;" id="completed-count">0</p>
+                            <div class="col">
+                                <div class="card bg-success bg-opacity-10">
+                                    <div class="card-body text-center py-2">
+                                        <h6 class="card-title mb-0">Concluídas</h6>
+                                        <p class="card-text fs-4 fw-bold" id="completed-count">0</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background-color: rgba(245, 158, 11, 0.15);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Em Processo</h6>
-                                        <p class="card-text fs-4 fw-bold" style="color: #d97706;" id="processing-count">0</p>
+                            <div class="col">
+                                <div class="card bg-warning bg-opacity-10">
+                                    <div class="card-body text-center py-2">
+                                        <h6 class="card-title mb-0">Em Processo</h6>
+                                        <p class="card-text fs-4 fw-bold" id="processing-count">0</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background-color: rgba(239, 68, 68, 0.15);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Erros</h6>
-                                        <p class="card-text fs-4 fw-bold" style="color: #dc2626;" id="error-count">0</p>
+                            <div class="col">
+                                <div class="card bg-danger bg-opacity-10">
+                                    <div class="card-body text-center py-2">
+                                        <h6 class="card-title mb-0">Erros</h6>
+                                        <p class="card-text fs-4 fw-bold" id="error-count">0</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="cnpj-list">
-                            <table class="table table-sm table-hover align-middle">
-                                <thead>
-                                    <tr>
-                                        <th width="40">
-                                            <div class="form-check">
-                                                <input type="checkbox" id="select-all-cnpjs" class="form-check-input">
-                                            </div>
-                                        </th>
-                                        <th>CNPJ</th>
-                                        <th>Status</th>
-                                        <th width="80">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cnpj-status-list">
-                                    <!-- Será preenchido via JavaScript -->
-                                </tbody>
-                            </table>
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all-cnpjs" class="form-check-input"></th>
+                                <th>CNPJ</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cnpj-status-list">
+                            <!-- Será preenchido via JavaScript -->
+                        </tbody>
+                    </table>
                         </div>
                     </div>
                 </div>
@@ -490,7 +190,7 @@
 
     <div class="footer">
         <div class="container text-center">
-            <p class="mb-0 text-white opacity-75">CNPJ Consulta - Sistema automatizado de consulta de CNPJs via API da ReceitaWS</p>
+            <p class="mb-0 text-muted">CNPJ Consulta - Sistema automatizado de consulta de CNPJs via API da ReceitaWS</p>
         </div>
     </div>
 
@@ -499,7 +199,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Resultado da Consulta</h5>
+                    <h5 class="modal-title">Resultado da Consulta</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -560,177 +260,58 @@
                 return statusMap[status] || statusMap.unknown;
             }
             
-            // Cache para dados
-            let statusCache = {
-                data: null,
-                timestamp: 0
-            };
-            
-            // Função otimizada para atualizar o status com suporte a cache
-            async function updateStatus(forceRefresh = false) {
-                // Evita múltiplas chamadas simultâneas
-                if (isUpdating) return;
-                
-                const now = Date.now();
-                const cacheAge = now - statusCache.timestamp;
-                
-                // Usa cache se disponível e não forçar atualização (30 segundos de validade)
-                if (!forceRefresh && statusCache.data && cacheAge < 30000) {
-                    updateUIFromData(statusCache.data);
-                    return;
-                }
-                
+            // Função para atualizar o status
+            async function updateStatus() {
                 try {
-                    isUpdating = true;
                     refreshStatusBtn.classList.add('processing');
-                    
-                    // Adiciona timestamp para evitar cache do navegador
-                    const response = await fetch(`/api/status/?_t=${now}`);
+                    const response = await fetch('/api/status/');
                     const data = await response.json();
                     
-                    // Armazena em cache
-                    statusCache.data = data;
-                    statusCache.timestamp = now;
+                    totalCount.textContent = data.total;
+                    completedCount.textContent = data.completed;
+                    processingCount.textContent = data.processing;
+                    errorCount.textContent = data.error;
                     
-                    // Atualiza UI
-                    updateUIFromData(data);
-                    
-                } catch (error) {
-                    console.error('Erro ao atualizar status:', error);
-                } finally {
-                    isUpdating = false;
-                    refreshStatusBtn.classList.remove('processing');
-                }
-            }
-            
-            // Função separada para atualizar UI a partir dos dados
-            function updateUIFromData(data) {
-                // Atualiza contadores sem re-renderizar o DOM desnecessariamente
-                if (totalCount.textContent !== data.total.toString()) totalCount.textContent = data.total;
-                if (completedCount.textContent !== data.completed.toString()) completedCount.textContent = data.completed;
-                if (processingCount.textContent !== data.processing.toString()) processingCount.textContent = data.processing;
-                if (errorCount.textContent !== data.error.toString()) errorCount.textContent = data.error;
-                
-                // Compara resultados atuais com os novos
-                const currentCnpjs = Array.from(document.querySelectorAll('.cnpj-checkbox')).map(el => el.value);
-                const newCnpjs = data.results.map(result => result.cnpj);
-                
-                // Se os CNPJs são os mesmos, apenas atualize o status
-                if (arraysEqual(currentCnpjs, newCnpjs)) {
+                    let html = '';
                     data.results.forEach(result => {
-                        const row = document.querySelector(`.cnpj-checkbox[value="${result.cnpj}"]`).closest('tr');
-                        const statusCell = row.querySelector('td:nth-child(3)');
-                        const actionsCell = row.querySelector('td:nth-child(4)');
+                        const formattedCNPJ = formatCNPJ(result.cnpj);
+                        const statusBadge = getStatusBadge(result.status);
+                        const viewBtn = result.status === 'completed' 
+                            ? `<button class="btn btn-sm btn-outline-primary view-result-btn" data-cnpj="${result.cnpj}">Ver</button>` 
+                            : '';
                         
-                        // Atualiza status apenas se mudou
-                        const newStatusBadge = getStatusBadge(result.status);
-                        if (statusCell.innerHTML !== newStatusBadge) {
-                            statusCell.innerHTML = newStatusBadge;
-                            
-                            // Atualiza botão de visualização se status mudou para concluído
-                            if (result.status === 'completed' && !actionsCell.querySelector('.view-result-btn')) {
-                                const viewBtn = document.createElement('button');
-                                viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
-                                viewBtn.setAttribute('data-cnpj', result.cnpj);
-                                viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
-                                viewBtn.addEventListener('click', function() {
-                                    showResult(result.cnpj);
-                                });
-                                actionsCell.innerHTML = '';
-                                actionsCell.appendChild(viewBtn);
-                            } else if (result.status !== 'completed') {
-                                actionsCell.innerHTML = '';
-                            }
-                        }
+                        html += `
+                            <tr>
+                                <td><input type="checkbox" class="form-check-input cnpj-checkbox" value="${result.cnpj}"></td>
+                                <td>${formattedCNPJ}</td>
+                                <td>${statusBadge}</td>
+                                <td>${viewBtn}</td>
+                            </tr>
+                        `;
                     });
-                    return;
-                }
-                
-                // Usa DocumentFragment para melhorar performance de renderização
-                const fragment = document.createDocumentFragment();
-                
-                // Função para criar elemento TR
-                const createRow = (result) => {
-                    const tr = document.createElement('tr');
-                    const formattedCNPJ = formatCNPJ(result.cnpj);
-                    const statusBadge = getStatusBadge(result.status);
                     
-                    // Célula do checkbox
-                    const tdCheck = document.createElement('td');
-                    const divCheck = document.createElement('div');
-                    divCheck.className = 'form-check';
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'form-check-input cnpj-checkbox';
-                    checkbox.value = result.cnpj;
-                    divCheck.appendChild(checkbox);
-                    tdCheck.appendChild(divCheck);
+                    cnpjStatusList.innerHTML = html;
                     
-                    // Célula do CNPJ
-                    const tdCnpj = document.createElement('td');
-                    const span = document.createElement('span');
-                    span.className = 'fw-medium';
-                    span.textContent = formattedCNPJ;
-                    tdCnpj.appendChild(span);
-                    
-                    // Célula do status
-                    const tdStatus = document.createElement('td');
-                    tdStatus.innerHTML = statusBadge;
-                    
-                    // Célula de ações
-                    const tdActions = document.createElement('td');
-                    if (result.status === 'completed') {
-                        const viewBtn = document.createElement('button');
-                        viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
-                        viewBtn.setAttribute('data-cnpj', result.cnpj);
-                        viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
-                        viewBtn.addEventListener('click', function() {
-                            showResult(result.cnpj);
+                    // Adiciona evento aos botões de visualização
+                    document.querySelectorAll('.view-result-btn').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const cnpj = this.getAttribute('data-cnpj');
+                            await showResult(cnpj);
                         });
-                        tdActions.appendChild(viewBtn);
-                    }
+                    });
                     
-                    // Adiciona células à linha
-                    tr.appendChild(tdCheck);
-                    tr.appendChild(tdCnpj);
-                    tr.appendChild(tdStatus);
-                    tr.appendChild(tdActions);
-                    
-                    return tr;
-                };
-                
-                // Cria linhas da tabela
-                data.results.forEach(result => {
-                    fragment.appendChild(createRow(result));
-                });
-                
-                // Limpa tabela atual e adiciona novos elementos
-                while (cnpjStatusList.firstChild) {
-                    cnpjStatusList.removeChild(cnpjStatusList.firstChild);
-                }
-                cnpjStatusList.appendChild(fragment);
-                
-                // Configura o checkbox "selecionar todos" - apenas uma vez
-                if (!document.getElementById('select-all-cnpjs').hasAttribute('data-initialized')) {
+                    // Configura o checkbox "selecionar todos"
                     const selectAllCheckbox = document.getElementById('select-all-cnpjs');
                     selectAllCheckbox.addEventListener('change', function() {
                         document.querySelectorAll('.cnpj-checkbox').forEach(checkbox => {
                             checkbox.checked = this.checked;
                         });
                     });
-                    selectAllCheckbox.setAttribute('data-initialized', 'true');
+                } catch (error) {
+                    console.error('Erro ao atualizar status:', error);
+                } finally {
+                    refreshStatusBtn.classList.remove('processing');
                 }
-            }
-            
-            // Função auxiliar para comparar arrays
-            function arraysEqual(a, b) {
-                if (a.length !== b.length) return false;
-                const sortedA = [...a].sort();
-                const sortedB = [...b].sort();
-                for (let i = 0; i < sortedA.length; i++) {
-                    if (sortedA[i] !== sortedB[i]) return false;
-                }
-                return true;
             }
             
             // Função para mostrar resultado
@@ -741,58 +322,33 @@
                     
                     let html = `
                         <div class="mb-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
-                                    <i class="bi bi-building text-primary" style="font-size: 2rem;"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-1">${data.company_name || 'Sem nome'}</h5>
-                                    <p class="mb-0 text-muted">CNPJ: ${formatCNPJ(data.cnpj)}</p>
-                                </div>
-                            </div>
-                            ${data.trade_name ? `<div class="alert alert-light"><strong>Nome Fantasia:</strong> ${data.trade_name}</div>` : ''}
+                            <h5>${data.company_name || 'Sem nome'}</h5>
+                            <p>CNPJ: ${formatCNPJ(data.cnpj)}</p>
+                            ${data.trade_name ? `<p>Nome Fantasia: ${data.trade_name}</p>` : ''}
                         </div>
                         
                         <div class="row mb-4">
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-geo-alt me-2"></i>Endereço</h6>
-                                        <p class="mb-1">${data.address || 'Não informado'}</p>
-                                        <p class="mb-0">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
-                                    </div>
-                                </div>
+                            <div class="col-md-6">
+                                <h6>Endereço</h6>
+                                <p>${data.address || 'Não informado'}</p>
+                                <p>${data.city || ''} - ${data.state || ''} ${data.zip_code ? `CEP: ${data.zip_code}` : ''}</p>
                             </div>
                             <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-telephone me-2"></i>Contato</h6>
-                                        <p class="mb-1"><strong>Email:</strong> ${data.email || 'Não informado'}</p>
-                                        <p class="mb-0"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
-                                    </div>
-                                </div>
+                                <h6>Contato</h6>
+                                <p>Email: ${data.email || 'Não informado'}</p>
+                                <p>Telefone: ${data.phone || 'Não informado'}</p>
                             </div>
                         </div>
                         
                         <div class="mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-bank me-2"></i>Simples Nacional</h6>
-                                    <p class="mb-1">${data.simples_nacional ? '<span class="badge bg-success">Optante</span>' : '<span class="badge bg-secondary">Não optante</span>'}</p>
-                                    ${data.simples_nacional_date ? `<p class="mb-0"><strong>Desde:</strong> ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
-                                </div>
-                            </div>
+                            <h6>Simples Nacional</h6>
+                            <p>${data.simples_nacional ? 'Optante' : 'Não optante'}</p>
+                            ${data.simples_nacional_date ? `<p>Desde: ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
                         </div>
                         
                         <div>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-code-slash me-2"></i>Dados Brutos</h6>
-                                </div>
-                                <div class="card-body p-0">
-                                    <pre class="m-0 p-3 rounded-0" style="max-height: 300px; overflow: auto;">${JSON.stringify(data.raw_data, null, 2)}</pre>
-                                </div>
-                            </div>
+                            <h6>Dados Brutos</h6>
+                            <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow: auto;">${JSON.stringify(data.raw_data, null, 2)}</pre>
                         </div>
                     `;
                     
@@ -804,8 +360,10 @@
                 }
             }
             
-            // Configura input de arquivo - otimizado
-            selectFileBtn.addEventListener('click', () => fileInput.click());
+            // Configura input de arquivo
+            selectFileBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
             
             fileInput.addEventListener('change', function() {
                 if (this.files.length > 0) {
@@ -816,39 +374,38 @@
                 }
             });
             
-            removeFileBtn.addEventListener('click', () => {
+            removeFileBtn.addEventListener('click', function() {
                 fileInput.value = '';
                 selectedFileContainer.style.display = 'none';
             });
             
-            // Configuração de Drag & Drop - otimizada
-            const preventDefaults = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            };
-            
-            const highlight = () => dropZone.classList.add('bg-light');
-            const unhighlight = () => dropZone.classList.remove('bg-light');
-            
+            // Configuração de Drag & Drop
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, {passive: false});
+                dropZone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
             });
             
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, highlight, {passive: true});
+                dropZone.addEventListener(eventName, function() {
+                    this.classList.add('bg-light');
+                }, false);
             });
             
             ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, unhighlight, {passive: true});
+                dropZone.addEventListener(eventName, function() {
+                    this.classList.remove('bg-light');
+                }, false);
             });
             
-            dropZone.addEventListener('drop', (e) => {
+            dropZone.addEventListener('drop', function(e) {
                 fileInput.files = e.dataTransfer.files;
                 if (fileInput.files.length > 0) {
                     selectedFileName.textContent = fileInput.files[0].name;
                     selectedFileContainer.style.display = 'block';
                 }
-            }, {passive: false});
+            }, false);
             
             // Submissão do formulário de upload
             uploadForm.addEventListener('submit', async function(e) {
@@ -865,7 +422,7 @@
                 try {
                     uploadBtn.classList.add('processing');
                     uploadBtn.disabled = true;
-                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Enviando...';
+                    document.getElementById('upload-btn-text').textContent = 'Enviando...';
                     
                     const response = await fetch('/api/upload-file/', {
                         method: 'POST',
@@ -893,7 +450,7 @@
                 } finally {
                     uploadBtn.classList.remove('processing');
                     uploadBtn.disabled = false;
-                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-upload me-2"></i>Enviar Arquivo';
+                    document.getElementById('upload-btn-text').textContent = 'Enviar Arquivo';
                 }
             });
             
@@ -910,7 +467,7 @@
                 try {
                     consultBtn.classList.add('processing');
                     consultBtn.disabled = true;
-                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Consultando...';
+                    document.getElementById('consult-btn-text').textContent = 'Consultando...';
                     
                     const response = await fetch('/api/upload-cnpjs/', {
                         method: 'POST',
@@ -942,7 +499,7 @@
                 } finally {
                     consultBtn.classList.remove('processing');
                     consultBtn.disabled = false;
-                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-search me-2"></i>Consultar CNPJ';
+                    document.getElementById('consult-btn-text').textContent = 'Consultar CNPJ';
                 }
             });
             
@@ -968,97 +525,10 @@
             refreshStatusBtn.addEventListener('click', updateStatus);
             
             // Carrega status inicial
-            updateStatus(true); // forçar primeira atualização
+            updateStatus();
             
-            // Função para pausar/retomar atualização automática
-            function toggleAutoUpdate() {
-                autoUpdateEnabled = !autoUpdateEnabled;
-                
-                if (updateTimeout) {
-                    clearTimeout(updateTimeout);
-                    updateTimeout = null;
-                }
-                
-                if (autoUpdateEnabled) {
-                    scheduleNextUpdate();
-                }
-            }
-            
-            // Programa próxima atualização com intervalo mais longo (60 segundos)
-            function scheduleNextUpdate() {
-                if (!autoUpdateEnabled) return;
-                
-                // Limpa qualquer timeout existente
-                if (updateTimeout) {
-                    clearTimeout(updateTimeout);
-                }
-                
-                // Agenda próxima atualização
-                updateTimeout = setTimeout(() => {
-                    updateStatus(false).then(() => { // não forçar atualização
-                        scheduleNextUpdate();
-                    });
-                }, 60000); // 60 segundos para reduzir carga no servidor
-            }
-            
-            // Adiciona um botão para habilitar/desabilitar atualização automática
-            const autoUpdateBtn = document.createElement('button');
-            autoUpdateBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-            autoUpdateBtn.innerHTML = '<i class="bi bi-clock"></i> Auto';
-            autoUpdateBtn.title = 'Pausar atualização automática';
-            
-            autoUpdateBtn.addEventListener('click', function() {
-                toggleAutoUpdate();
-                if (autoUpdateEnabled) {
-                    this.innerHTML = '<i class="bi bi-clock"></i> Auto';
-                    this.title = 'Pausar atualização automática';
-                    this.classList.remove('btn-secondary');
-                    this.classList.add('btn-outline-secondary');
-                } else {
-                    this.innerHTML = '<i class="bi bi-clock-fill"></i> Manual';
-                    this.title = 'Retomar atualização automática';
-                    this.classList.remove('btn-outline-secondary');
-                    this.classList.add('btn-secondary');
-                }
-            });
-            
-            // Adiciona o botão ao lado do botão de atualização
-            refreshStatusBtn.parentNode.insertBefore(autoUpdateBtn, refreshStatusBtn.nextSibling);
-            
-            // Atualiza o botão de atualização manual para usar cache quando possível
-            refreshStatusBtn.addEventListener('click', function() {
-                updateStatus(true); // força atualização quando o botão é clicado
-            });
-            refreshStatusBtn.removeEventListener('click', updateStatus);
-            
-            // Inicia atualização automática
-            scheduleNextUpdate();
-            
-            // Formata automaticamente o CNPJ ao digitar - com debounce para melhor performance
-            let debounceTimeout;
-            cnpjInput.addEventListener('input', function(e) {
-                clearTimeout(debounceTimeout);
-                
-                const inputValue = e.target.value;
-                
-                // Se não tiver números, não processa
-                if (!/\d/.test(inputValue)) return;
-                
-                debounceTimeout = setTimeout(() => {
-                    let value = inputValue.replace(/\D/g, '');
-                    if (value.length <= 14) {
-                        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-                        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                        value = value.replace(/(\d{4})(\d)/, '$1-$2');
-                    }
-                    
-                    // Só atualiza se o valor formatado for diferente
-                    if (value !== inputValue) {
-                        e.target.value = value;
-                    }
-                }, 100);
-            });
+            // Atualiza automaticamente o status a cada 10 segundos
+            setInterval(updateStatus, 10000);
         });
     </script>
 </body>
