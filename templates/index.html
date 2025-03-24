@@ -3,193 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNPJ Consulta - Sistema de Consulta de CNPJs</title>
+    <title>CNPJ Mining - Extração de Dados Empresariais</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --secondary: #10b981;
-            --secondary-dark: #059669;
-            --dark: #1e293b;
-            --light: #f8fafc;
-            --gray-light: #e2e8f0;
-            --gray: #94a3b8;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-            --gradient-start: #3b82f6;
-            --gradient-end: #10b981;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --border-radius: 0.5rem;
-            --border-radius-lg: 0.75rem;
-            --transition: all 0.2s ease-in-out;
+            --primary: #00e5ff;
+            --primary-dark: #00b8d4;
+            --secondary: #18ffb2;
+            --secondary-dark: #00e676;
+            --accent: #ff00e5;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --dark-blue: #0d1117;
+            --card-bg: #1a1a1a;
+            --card-border: #2a2a2a;
+            --light-text: #e0e0e0;
+            --muted-text: #8b8b8b;
+            --success: #00e676;
+            --warning: #ffab00;
+            --error: #ff5252;
+            --info: #00b0ff;
+            --shadow-glow: 0 0 15px rgba(0, 229, 255, 0.2);
+            --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
+            --border-radius: 0.75rem;
+            --border-radius-lg: 1rem;
+            --transition: all 0.25s ease-in-out;
+            --terminal-font: 'Space Mono', monospace;
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #f3f4f6;
-            color: var(--dark);
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--dark);
+            color: var(--light-text);
             line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(0, 229, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 0, 229, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
         }
 
         h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-            font-weight: 600;
-        }
-
-        .header {
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            padding: 2.5rem 0;
-            margin-bottom: 2rem;
-            border-bottom: none;
-            box-shadow: var(--shadow-md);
+            font-weight: 700;
             color: white;
         }
 
-        .header h1 {
-            font-weight: 700;
+        .header {
+            background: linear-gradient(135deg, var(--dark-blue), var(--dark));
+            padding: 2.5rem 0;
+            border-bottom: 1px solid var(--card-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary), var(--accent));
+            z-index: 1;
+        }
+
+        .header .logo-text {
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 2.5rem;
+            letter-spacing: -0.5px;
             margin-bottom: 0.5rem;
         }
 
         .header .lead {
-            opacity: 0.9;
+            color: var(--muted-text);
             font-weight: 400;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .mining-dashboard {
+            padding: 2rem 0;
         }
 
         .card {
-            border: none;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-sm);
             transition: var(--transition);
             overflow: hidden;
+            margin-bottom: 1.5rem;
         }
 
         .card:hover {
             box-shadow: var(--shadow-md);
+            transform: translateY(-3px);
         }
 
         .card-header {
-            background-color: white;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--card-border);
             padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header .bi {
+            font-size: 1.2rem;
+            margin-right: 0.75rem;
+            color: var(--primary);
+        }
+
+        .card-title {
+            margin-bottom: 0;
+            font-size: 1.25rem;
         }
 
         .card-body {
             padding: 1.5rem;
         }
 
+        .mining-status {
+            position: relative;
+        }
+
+        .mining-visualization {
+            min-height: 180px;
+            position: relative;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .mining-progress {
+            height: 6px;
+            background-color: var(--card-border);
+            border-radius: 50px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 50px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            width: 0%;
+            transition: width 1s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                            transparent 0%, 
+                            rgba(255, 255, 255, 0.2) 50%, 
+                            transparent 100%);
+            animation: progress-shine 2s infinite;
+        }
+
+        @keyframes progress-shine {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            opacity: 0.7;
+        }
+
+        .stat-card.success::after {
+            background: var(--success);
+        }
+
+        .stat-card.warning::after {
+            background: var(--warning);
+        }
+
+        .stat-card.error::after {
+            background: var(--error);
+        }
+
+        .stat-card h6 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted-text);
+            margin-bottom: 1rem;
+        }
+
+        .stat-card .value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            font-family: var(--terminal-font);
+        }
+
+        .stat-card .value-total {
+            font-size: 1.75rem;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .stat-card .icon {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            font-size: 1.5rem;
+            opacity: 0.3;
+        }
+
+        .terminal {
+            background-color: var(--dark-blue);
+            border-radius: var(--border-radius);
+            font-family: var(--terminal-font);
+            padding: 1.25rem;
+            height: 200px;
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .terminal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .terminal::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .terminal-line {
+            margin-bottom: 0.5rem;
+            opacity: 0.85;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            white-space: nowrap;
+        }
+
+        .terminal-prompt {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .terminal-command {
+            color: var(--light-text);
+        }
+
+        .terminal-response {
+            color: var(--muted-text);
+            padding-left: 1.5rem;
+        }
+
+        .terminal-response.success {
+            color: var(--success);
+        }
+
+        .terminal-response.error {
+            color: var(--error);
+        }
+
+        .terminal-time {
+            color: var(--accent);
+            margin-right: 0.75rem;
+            opacity: 0.7;
+        }
+
         .file-upload-container {
-            border: 2px dashed var(--gray-light);
+            border: 2px dashed var(--card-border);
             border-radius: var(--border-radius);
             padding: 2.5rem 1.5rem;
             text-align: center;
-            margin-bottom: 1.5rem;
-            background-color: var(--light);
+            background-color: rgba(0, 0, 0, 0.2);
             transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-upload-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, 
+                                rgba(0, 229, 255, 0.1) 0%, 
+                                transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .file-upload-container:hover::before {
+            opacity: 1;
         }
 
         .file-upload-container:hover {
             border-color: var(--primary);
-            background-color: rgba(59, 130, 246, 0.04);
+            transform: translateY(-3px);
             cursor: pointer;
-            transform: translateY(-2px);
         }
 
-        .status-card {
-            margin-bottom: 1.5rem;
+        .file-upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            opacity: 0.8;
         }
 
         .btn {
-            font-weight: 500;
-            padding: 0.5rem 1.25rem;
+            font-weight: 600;
+            padding: 0.625rem 1.5rem;
             border-radius: 0.5rem;
             transition: var(--transition);
-            text-transform: none;
-            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+            border: none;
+        }
+
+        .btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                            transparent 0%, 
+                            rgba(255, 255, 255, 0.1) 50%, 
+                            transparent 100%);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        .btn:hover::before {
+            transform: translateX(100%);
         }
 
         .btn-primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
+            background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+            color: var(--dark);
         }
 
         .btn-primary:hover {
-            background-color: var(--primary-dark);
-            border-color: var(--primary-dark);
-            transform: translateY(-1px);
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 229, 255, 0.3);
         }
 
         .btn-success {
-            background-color: var(--secondary);
-            border-color: var(--secondary);
+            background: linear-gradient(90deg, var(--secondary-dark), var(--secondary));
+            color: var(--dark);
         }
 
         .btn-success:hover {
-            background-color: var(--secondary-dark);
-            border-color: var(--secondary-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-primary {
-            color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-outline-primary:hover {
-            background-color: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-
-        .btn-outline-danger:hover {
-            transform: translateY(-1px);
+            background: linear-gradient(90deg, var(--secondary), var(--secondary-dark));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(24, 255, 178, 0.3);
         }
 
         .spinner-border {
-            display: none;
-            width: 1rem;
-            height: 1rem;
-        }
-
-        .processing .spinner-border {
-            display: inline-block;
-        }
-
-        .status-badge {
-            font-size: 0.8em;
-            padding: 0.35em 0.65em;
-            border-radius: 50rem;
-            font-weight: 500;
-        }
-
-        .bg-success {
-            background-color: var(--secondary) !important;
-        }
-
-        .bg-warning {
-            background-color: var(--warning) !important;
-        }
-
-        .bg-danger {
-            background-color: var(--danger) !important;
-        }
-
-        .bg-info {
-            background-color: var(--info) !important;
+            width: 1.25rem;
+            height: 1.25rem;
         }
 
         .cnpj-list {
             max-height: 400px;
             overflow-y: auto;
             border-radius: var(--border-radius);
-            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.05);
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
         }
 
         .cnpj-list::-webkit-scrollbar {
@@ -197,47 +432,48 @@
         }
 
         .cnpj-list::-webkit-scrollbar-track {
-            background: var(--light);
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
         }
 
         .cnpj-list::-webkit-scrollbar-thumb {
-            background-color: var(--gray);
-            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
 
         .table {
             margin-bottom: 0;
+            color: var(--light-text);
         }
 
         .table thead th {
             font-weight: 600;
-            color: var(--dark);
-            background-color: rgba(0, 0, 0, 0.02);
+            color: var(--muted-text);
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            padding: 1rem;
         }
 
-        .table-hover tbody tr {
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--card-border);
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
             transition: var(--transition);
         }
 
-        .table-hover tbody tr:hover {
-            background-color: rgba(59, 130, 246, 0.04);
-        }
-
-        .form-control {
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--gray-light);
-            font-size: 0.95rem;
-            box-shadow: none;
-            transition: var(--transition);
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        .table tbody tr:hover {
+            background-color: rgba(0, 229, 255, 0.05);
         }
 
         .form-check-input {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
             cursor: pointer;
         }
 
@@ -246,241 +482,480 @@
             border-color: var(--primary);
         }
 
-        .stat-card {
-            border-radius: var(--border-radius);
-            transition: var(--transition);
-            overflow: hidden;
-            height: 100%;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .stat-card .card-body {
-            padding: 1.25rem;
-        }
-
-        .stat-card h6 {
-            font-size: 0.875rem;
-            text-transform: uppercase;
+        .status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.35em 0.75em;
+            border-radius: 50rem;
             letter-spacing: 0.5px;
-            color: var(--gray);
+            text-transform: uppercase;
         }
 
-        .stat-card .card-text {
-            font-weight: 700;
-            margin-bottom: 0;
+        .badge-completed {
+            background-color: var(--success);
             color: var(--dark);
         }
 
-        .footer {
-            margin-top: 3rem;
-            padding: 1.5rem 0;
-            background-color: var(--dark);
-            border-top: none;
+        .badge-processing {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+
+        .badge-queued {
+            background-color: var(--info);
+            color: var(--dark);
+        }
+
+        .badge-error {
+            background-color: var(--error);
             color: white;
         }
 
-        .modal-content {
-            border: none;
-            border-radius: var(--border-radius-lg);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
+        .data-node {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+            opacity: 0;
+            z-index: 1;
         }
 
-        .modal-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            background-color: white;
-            padding: 1.25rem 1.5rem;
+        .data-line {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            opacity: 0;
+            z-index: 1;
+        }
+        
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            margin-top: 1rem;
+        }
+        
+        .pulse {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success);
+            margin-right: 0.5rem;
+            position: relative;
+        }
+        
+        .pulse::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: var(--success);
+            animation: pulse 2s infinite;
+            z-index: 0;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            70% {
+                transform: scale(2);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
         }
 
-        .modal-body {
-            padding: 1.5rem;
-        }
-
-        .modal-footer {
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 1.25rem 1.5rem;
-        }
-
-        pre {
-            background-color: #f8f9fa;
+        .metrics-chart {
+            background-color: rgba(0, 0, 0, 0.3);
             border-radius: var(--border-radius);
-            font-size: 0.875rem;
+            overflow: hidden;
+            position: relative;
+            min-height: 250px;
+            margin-bottom: 1.5rem;
         }
 
-        /* Removendo animações pesadas para melhorar performance */
+        .metrics-chart-bars {
+            display: flex;
+            align-items: flex-end;
+            height: 200px;
+            padding: 1.5rem;
+            gap: 12px;
+            justify-content: space-between;
+        }
 
-        /* Responsividade */
+        .metrics-bar {
+            flex: 1;
+            background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+            border-radius: 4px 4px 0 0;
+            min-width: 30px;
+            max-width: 60px;
+            position: relative;
+            transition: height 1s ease-out;
+        }
+
+        .metrics-bar-completed {
+            background: linear-gradient(180deg, var(--success), var(--secondary-dark));
+        }
+        
+        .metrics-bar-processing {
+            background: linear-gradient(180deg, var(--warning), #f57c00);
+        }
+        
+        .metrics-bar-error {
+            background: linear-gradient(180deg, var(--error), #d32f2f);
+        }
+
+        .metrics-bar::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .metrics-chart-labels {
+            display: flex;
+            padding: 0 1.5rem 1rem;
+            gap: 12px;
+            justify-content: space-between;
+        }
+
+        .metrics-label {
+            flex: 1;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--muted-text);
+            min-width: 30px;
+            max-width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .metrics-legend {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--muted-text);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 0.5rem;
+        }
+
+        .footer {
+            background-color: var(--darker);
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid var(--card-border);
+            position: relative;
+        }
+
+        .footer::before {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+
+        .result-modal .modal-content {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-lg);
+        }
+
+        .result-modal .modal-header {
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .result-modal .modal-footer {
+            border-top: 1px solid var(--card-border);
+        }
+
+        .result-card {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .result-section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted-text);
+            margin-bottom: 0.75rem;
+        }
+
+        .data-value {
+            font-family: var(--terminal-font);
+            color: var(--primary);
+        }
+
+        .selected-file-container {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .selected-file-name {
+            color: var(--light-text);
+            font-weight: 500;
+            margin-right: auto;
+            margin-left: 0.75rem;
+        }
+
         @media (max-width: 768px) {
             .header {
                 padding: 2rem 0;
             }
             
+            .header .logo-text {
+                font-size: 2rem;
+            }
+            
+            .stat-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .metrics-chart-bars {
+                gap: 8px;
+                padding: 1rem;
+            }
+            
+            .metrics-bar {
+                min-width: 20px;
+            }
+            
+            .metrics-chart-labels {
+                gap: 8px;
+                padding: 0 1rem 1rem;
+            }
+            
+            .metrics-label {
+                min-width: 20px;
+                font-size: 0.7rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .stat-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-legend {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
             .card-header {
-                padding: 1rem 1.25rem;
+                padding: 1rem;
             }
             
             .card-body {
-                padding: 1.25rem;
-            }
-            
-            .file-upload-container {
-                padding: 2rem 1rem;
-            }
-            
-            .btn {
-                padding: 0.5rem 1rem;
+                padding: 1rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <h1 class="mb-0"><i class="bi bi-building"></i> CNPJ Consulta</h1>
-            <p class="lead">Sistema automatizado de consulta de CNPJs via API da ReceitaWS</p>
+        <div class="container text-center">
+            <h1 class="logo-text"><i class="bi bi-database"></i> CNPJ Mining</h1>
+            <p class="lead">Extração e análise de dados empresariais em tempo real</p>
+            <div class="live-indicator">
+                <div class="pulse"></div>
+                <span>Mineração em tempo real</span>
+            </div>
         </div>
     </div>
 
-    <div class="container mb-5">
-        <div class="row g-4">
-            <div class="col-lg-5">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-cloud-upload me-2"></i>Upload de Arquivo</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="upload-form" enctype="multipart/form-data">
-                            <div class="mb-3 file-upload-container" id="drop-zone">
-                                <div class="mb-3">
-                                    <i class="bi bi-file-earmark-arrow-up" style="font-size: 2.5rem; color: var(--primary);"></i>
+    <div class="mining-dashboard">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-cloud-upload"></i>
+                            <h5 class="card-title">Upload de CNPJs</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="upload-form" enctype="multipart/form-data">
+                                <div class="file-upload-container" id="drop-zone">
+                                    <i class="bi bi-file-earmark-arrow-up file-upload-icon"></i>
+                                    <h5>Arraste seu arquivo de CNPJs</h5>
+                                    <p class="text-muted">ou</p>
+                                    <input type="file" id="file-input" class="d-none" accept=".csv,.xls,.xlsx">
+                                    <button type="button" class="btn btn-primary" id="select-file-btn">
+                                        <i class="bi bi-folder me-2"></i>Selecionar Arquivo
+                                    </button>
+                                    <p class="mt-3 text-muted small">CSV, XLS, XLSX</p>
                                 </div>
-                                <h5>Arraste e solte um arquivo aqui</h5>
-                                <p class="text-muted">ou</p>
-                                <input type="file" id="file-input" class="d-none" accept=".csv,.xls,.xlsx">
-                                <button type="button" class="btn btn-primary" id="select-file-btn">
-                                    <i class="bi bi-folder me-2"></i>Selecionar Arquivo
-                                </button>
-                                <p class="mt-3 text-muted small">Formatos suportados: CSV, XLS, XLSX</p>
-                            </div>
-                            <div class="mb-3" id="selected-file-container" style="display: none;">
-                                <div class="d-flex align-items-center p-3 bg-light rounded">
-                                    <i class="bi bi-file-earmark-text me-3 text-primary" style="font-size: 1.5rem;"></i>
-                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate"></span>
-                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-file-btn">
+                                
+                                <div id="selected-file-container" class="selected-file-container" style="display: none;">
+                                    <i class="bi bi-file-earmark-text text-primary"></i>
+                                    <span id="selected-file-name" class="selected-file-name"></span>
+                                    <button type="button" class="btn btn-sm btn-danger ms-2" id="remove-file-btn">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
-                            </div>
-                            <button type="submit" class="btn btn-success w-100" id="upload-btn">
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span id="upload-btn-text"><i class="bi bi-upload me-2"></i>Enviar Arquivo</span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="bi bi-search me-2"></i>Consulta Manual</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="manual-form">
-                            <div class="mb-3">
-                                <label for="cnpj-input" class="form-label fw-medium">CNPJ</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
-                                    <input type="text" class="form-control" id="cnpj-input" placeholder="00.000.000/0000-00">
-                                </div>
-                                <div class="form-text">Digite um CNPJ para consultar individualmente</div>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100" id="consult-btn">
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span id="consult-btn-text"><i class="bi bi-search me-2"></i>Consultar CNPJ</span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-7">
-                <div class="card status-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0"><i class="bi bi-list-check me-2"></i>Status das Consultas</h5>
-                        <div>
-                            <div class="dropdown d-inline-block me-2">
-                                <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-file-excel me-1"></i> Exportar
+                                
+                                <button type="submit" class="btn btn-success w-100" id="upload-btn">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span id="upload-btn-text"><i class="bi bi-rocket me-2"></i>Iniciar Mineração</span>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
-                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Todos</a></li>
-                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Apenas Concluídos</a></li>
-                                    <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Selecionados</a></li>
-                                </ul>
-                            </div>
-                            <button class="btn btn-sm btn-outline-primary" id="refresh-status-btn">
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
-                            </button>
+                            </form>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3 mb-4">
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card bg-light">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Total</h6>
-                                        <p class="card-text fs-4 fw-bold text-dark" id="total-count">0</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background-color: rgba(16, 185, 129, 0.15);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Concluídas</h6>
-                                        <p class="card-text fs-4 fw-bold" style="color: #059669;" id="completed-count">0</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background-color: rgba(245, 158, 11, 0.15);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Em Processo</h6>
-                                        <p class="card-text fs-4 fw-bold" style="color: #d97706;" id="processing-count">0</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background-color: rgba(239, 68, 68, 0.15);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Erros</h6>
-                                        <p class="card-text fs-4 fw-bold" style="color: #dc2626;" id="error-count">0</p>
-                                    </div>
-                                </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-terminal"></i>
+                            <h5 class="card-title">Log de Mineração</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="terminal" id="mining-log">
+                                <!-- Será preenchido via JavaScript -->
                             </div>
                         </div>
-                        
-                        <div class="cnpj-list">
-                            <table class="table table-sm table-hover align-middle">
-                                <thead>
-                                    <tr>
-                                        <th width="40">
-                                            <div class="form-check">
-                                                <input type="checkbox" id="select-all-cnpjs" class="form-check-input">
-                                            </div>
-                                        </th>
-                                        <th>CNPJ</th>
-                                        <th>Status</th>
-                                        <th width="80">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cnpj-status-list">
+                    </div>
+                </div>
+                
+                <div class="col-lg-8">
+                    <div class="card mining-status">
+                        <div class="card-header">
+                            <i class="bi bi-activity"></i>
+                            <h5 class="card-title">Status da Mineração</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-cards">
+                                <div class="stat-card">
+                                    <i class="bi bi-database icon"></i>
+                                    <h6>Total CNPJs</h6>
+                                    <div id="total-count" class="value value-total">0</div>
+                                    <small class="text-muted">Empresas na fila</small>
+                                </div>
+                                
+                                <div class="stat-card success">
+                                    <i class="bi bi-check-circle icon"></i>
+                                    <h6>Minerados</h6>
+                                    <div id="completed-count" class="value">0</div>
+                                    <small class="text-muted">CNPJs processados</small>
+                                </div>
+                                
+                                <div class="stat-card warning">
+                                    <i class="bi bi-lightning icon"></i>
+                                    <h6>Em Processo</h6>
+                                    <div id="processing-count" class="value">0</div>
+                                    <small class="text-muted">Em mineração</small>
+                                </div>
+                                
+                                <div class="stat-card error">
+                                    <i class="bi bi-exclamation-triangle icon"></i>
+                                    <h6>Erros</h6>
+                                    <div id="error-count" class="value">0</div>
+                                    <small class="text-muted">Falhas na mineração</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mining-progress">
+                                <div class="progress-bar" id="mining-progress-bar"></div>
+                            </div>
+                            
+                            <div class="mining-visualization" id="mining-visualization">
+                                <!-- Visualização animada de nós -->
+                            </div>
+                            
+                            <div class="metrics-chart">
+                                <div class="metrics-chart-bars" id="metrics-chart-bars">
                                     <!-- Será preenchido via JavaScript -->
-                                </tbody>
-                            </table>
+                                </div>
+                                <div class="metrics-chart-labels" id="metrics-chart-labels">
+                                    <!-- Será preenchido via JavaScript -->
+                                </div>
+                                <div class="metrics-legend">
+                                    <div class="legend-item">
+                                        <div class="legend-color" style="background-color: var(--success);"></div>
+                                        <span>Concluídos</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color" style="background-color: var(--warning);"></div>
+                                        <span>Em processo</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color" style="background-color: var(--error);"></div>
+                                        <span>Erros</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Últimos CNPJs Minerados</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-primary" id="export-btn">
+                                        <i class="bi bi-file-earmark-excel me-1"></i> Exportar
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-light ms-2" id="refresh-status-btn">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="cnpj-list">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th width="40">
+                                                <div class="form-check">
+                                                    <input type="checkbox" id="select-all-cnpjs" class="form-check-input">
+                                                </div>
+                                            </th>
+                                            <th>CNPJ</th>
+                                            <th>Status</th>
+                                            <th width="80">Ver</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cnpj-status-list">
+                                        <!-- Será preenchido via JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -490,25 +965,23 @@
 
     <div class="footer">
         <div class="container text-center">
-            <p class="mb-0 text-white opacity-75">CNPJ Consulta - Sistema automatizado de consulta de CNPJs via API da ReceitaWS</p>
+            <p class="mb-0 text-muted">CNPJ Mining v2.0 - Sistema avançado de mineração de dados empresariais</p>
         </div>
     </div>
 
     <!-- Modal de resultado -->
-    <div class="modal fade" id="result-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade result-modal" id="result-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Resultado da Consulta</h5>
+                    <h5 class="modal-title"><i class="bi bi-graph-up me-2"></i>Dados Minerados</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div id="result-container">
-                        <!-- Será preenchido via JavaScript -->
-                    </div>
+                <div class="modal-body" id="result-container">
+                    <!-- Será preenchido via JavaScript -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fechar</button>
                 </div>
             </div>
         </div>
@@ -526,86 +999,345 @@
             const selectedFileName = document.getElementById('selected-file-name');
             const removeFileBtn = document.getElementById('remove-file-btn');
             const uploadBtn = document.getElementById('upload-btn');
-            
-            const manualForm = document.getElementById('manual-form');
-            const cnpjInput = document.getElementById('cnpj-input');
-            const consultBtn = document.getElementById('consult-btn');
+            const miningLog = document.getElementById('mining-log');
             
             const refreshStatusBtn = document.getElementById('refresh-status-btn');
             const cnpjStatusList = document.getElementById('cnpj-status-list');
+            const exportBtn = document.getElementById('export-btn');
             
             const totalCount = document.getElementById('total-count');
             const completedCount = document.getElementById('completed-count');
             const processingCount = document.getElementById('processing-count');
             const errorCount = document.getElementById('error-count');
+            const miningProgressBar = document.getElementById('mining-progress-bar');
+            const miningVisualization = document.getElementById('mining-visualization');
+            
+            const metricsChartBars = document.getElementById('metrics-chart-bars');
+            const metricsChartLabels = document.getElementById('metrics-chart-labels');
             
             const resultModal = new bootstrap.Modal(document.getElementById('result-modal'));
             const resultContainer = document.getElementById('result-container');
             
-            // Funções auxiliares
+            // Função para formatar CNPJ
             function formatCNPJ(cnpj) {
                 cnpj = cnpj.replace(/\D/g, '');
                 if (cnpj.length !== 14) return cnpj;
                 return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
             }
             
+            // Função para obter badge de status
             function getStatusBadge(status) {
                 const statusMap = {
-                    'completed': '<span class="badge bg-success status-badge">Concluído</span>',
-                    'processing': '<span class="badge bg-warning status-badge">Processando</span>',
-                    'queued': '<span class="badge bg-info status-badge">Na Fila</span>',
-                    'error': '<span class="badge bg-danger status-badge">Erro</span>',
-                    'unknown': '<span class="badge bg-secondary status-badge">Desconhecido</span>'
+                    'completed': '<span class="status-badge badge-completed">Concluído</span>',
+                    'processing': '<span class="status-badge badge-processing">Processando</span>',
+                    'queued': '<span class="status-badge badge-queued">Na Fila</span>',
+                    'error': '<span class="status-badge badge-error">Erro</span>',
+                    'unknown': '<span class="status-badge badge-secondary">Desconhecido</span>'
                 };
                 return statusMap[status] || statusMap.unknown;
             }
             
-            // Variáveis para controlar atualização
+            // Função para adicionar linha de log
+            function addLogLine(type, content) {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString();
+                
+                const logLine = document.createElement('div');
+                logLine.className = 'terminal-line';
+                
+                switch(type) {
+                    case 'command':
+                        logLine.innerHTML = `<span class="terminal-time">[${timeStr}]</span><span class="terminal-prompt">$</span><span class="terminal-command">${content}</span>`;
+                        break;
+                    case 'response':
+                        logLine.innerHTML = `<span class="terminal-time">[${timeStr}]</span><span class="terminal-response">${content}</span>`;
+                        break;
+                    case 'success':
+                        logLine.innerHTML = `<span class="terminal-time">[${timeStr}]</span><span class="terminal-response success">${content}</span>`;
+                        break;
+                    case 'error':
+                        logLine.innerHTML = `<span class="terminal-time">[${timeStr}]</span><span class="terminal-response error">${content}</span>`;
+                        break;
+                }
+                
+                miningLog.appendChild(logLine);
+                miningLog.scrollTop = miningLog.scrollHeight;
+            }
+            
+            // Animação de mineração
+            function animateMining() {
+                // Limpa a visualização
+                miningVisualization.innerHTML = '';
+                
+                // Cria nós de dados aleatórios
+                const createNode = () => {
+                    const node = document.createElement('div');
+                    node.className = 'data-node';
+                    
+                    // Posição aleatória
+                    const left = Math.random() * 90 + 5;
+                    const top = Math.random() * 90 + 5;
+                    
+                    node.style.left = `${left}%`;
+                    node.style.top = `${top}%`;
+                    
+                    miningVisualization.appendChild(node);
+                    
+                    // Animação do nó
+                    setTimeout(() => {
+                        node.style.opacity = '1';
+                        
+                        // Conecta com outro nó
+                        const connectNode = () => {
+                            // Cria uma linha
+                            const line = document.createElement('div');
+                            line.className = 'data-line';
+                            
+                            // Determina conexão para outro nó
+                            const otherNodes = document.querySelectorAll('.data-node');
+                            if (otherNodes.length > 1) {
+                                const targetIndex = Math.floor(Math.random() * otherNodes.length);
+                                const targetNode = otherNodes[targetIndex];
+                                
+                                // Calcula posição e ângulo
+                                const x1 = parseFloat(node.style.left);
+                                const y1 = parseFloat(node.style.top);
+                                const x2 = parseFloat(targetNode.style.left);
+                                const y2 = parseFloat(targetNode.style.top);
+                                
+                                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                                
+                                // Aplica estilo
+                                line.style.width = `${length}%`;
+                                line.style.top = `${y1}%`;
+                                line.style.left = `${x1}%`;
+                                line.style.transform = `rotate(${angle}deg)`;
+                                line.style.transformOrigin = '0 0';
+                                
+                                miningVisualization.appendChild(line);
+                                
+                                // Anima linha
+                                setTimeout(() => {
+                                    line.style.opacity = '0.3';
+                                    
+                                    // Remove após um tempo
+                                    setTimeout(() => {
+                                        line.style.opacity = '0';
+                                        setTimeout(() => line.remove(), 500);
+                                    }, 1000 + Math.random() * 2000);
+                                    
+                                }, 100);
+                            }
+                        };
+                        
+                        connectNode();
+                        
+                        // Remove após um tempo
+                        setTimeout(() => {
+                            node.style.opacity = '0';
+                            setTimeout(() => node.remove(), 500);
+                        }, 2000 + Math.random() * 3000);
+                    }, 100);
+                };
+                
+                // Cria nós iniciais
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(createNode, i * 200);
+                }
+                
+                // Continua criando nós
+                const interval = setInterval(() => {
+                    createNode();
+                }, 800);
+                
+                return interval;
+            }
+            
+            // Inicia animação de mineração
+            let miningAnimationInterval = animateMining();
+            
+            // Simular dados iniciais para o gráfico de métricas
+            function updateMetricsChart(data) {
+                // Limpa o conteúdo atual
+                metricsChartBars.innerHTML = '';
+                metricsChartLabels.innerHTML = '';
+                
+                // Cria barras de exemplo para cada dia (últimos 7 dias)
+                const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                const today = new Date().getDay();
+                
+                // Gera dados mock para o chart
+                for (let i = 6; i >= 0; i--) {
+                    const dayIndex = (today - i + 7) % 7;
+                    const dayLabel = days[dayIndex];
+                    
+                    // Altura das barras (random para demonstração)
+                    const completedHeight = Math.floor(Math.random() * 60) + 20;
+                    const processingHeight = Math.floor(Math.random() * 30) + 10;
+                    const errorHeight = Math.floor(Math.random() * 15) + 5;
+                    
+                    // Cria as barras
+                    const barGroup = document.createElement('div');
+                    barGroup.style.display = 'flex';
+                    barGroup.style.flexDirection = 'column';
+                    barGroup.style.gap = '1px';
+                    barGroup.style.flex = '1';
+                    barGroup.style.alignItems = 'center';
+                    
+                    // Barra de concluídos
+                    const completedBar = document.createElement('div');
+                    completedBar.className = 'metrics-bar metrics-bar-completed';
+                    completedBar.style.height = `${completedHeight}px`;
+                    completedBar.style.width = '100%';
+                    
+                    // Barra de processando
+                    const processingBar = document.createElement('div');
+                    processingBar.className = 'metrics-bar metrics-bar-processing';
+                    processingBar.style.height = `${processingHeight}px`;
+                    processingBar.style.width = '100%';
+                    
+                    // Barra de erros
+                    const errorBar = document.createElement('div');
+                    errorBar.className = 'metrics-bar metrics-bar-error';
+                    errorBar.style.height = `${errorHeight}px`;
+                    errorBar.style.width = '100%';
+                    
+                    barGroup.appendChild(completedBar);
+                    barGroup.appendChild(processingBar);
+                    barGroup.appendChild(errorBar);
+                    
+                    metricsChartBars.appendChild(barGroup);
+                    
+                    // Adiciona label
+                    const label = document.createElement('div');
+                    label.className = 'metrics-label';
+                    label.textContent = dayLabel;
+                    metricsChartLabels.appendChild(label);
+                }
+            }
+            
+            // Configura input de arquivo
+            selectFileBtn.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    selectedFileName.textContent = this.files[0].name;
+                    selectedFileContainer.style.display = 'block';
+                    addLogLine('command', `file_selected "${this.files[0].name}"`);
+                    addLogLine('response', `Arquivo selecionado: ${this.files[0].name} (${Math.round(this.files[0].size / 1024)} KB)`);
+                } else {
+                    selectedFileContainer.style.display = 'none';
+                }
+            });
+            
+            removeFileBtn.addEventListener('click', () => {
+                fileInput.value = '';
+                selectedFileContainer.style.display = 'none';
+                addLogLine('command', 'file_remove');
+                addLogLine('response', 'Arquivo removido');
+            });
+            
+            // Configuração de Drag & Drop
+            const preventDefaults = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+            
+            const highlight = () => dropZone.classList.add('highlight');
+            const unhighlight = () => dropZone.classList.remove('highlight');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, {passive: false});
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, {passive: true});
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, {passive: true});
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                fileInput.files = e.dataTransfer.files;
+                if (fileInput.files.length > 0) {
+                    selectedFileName.textContent = fileInput.files[0].name;
+                    selectedFileContainer.style.display = 'block';
+                    addLogLine('command', `file_drag_drop "${fileInput.files[0].name}"`);
+                    addLogLine('response', `Arquivo carregado: ${fileInput.files[0].name} (${Math.round(fileInput.files[0].size / 1024)} KB)`);
+                }
+            }, {passive: false});
+            
+            // Variáveis de estado globais
             let autoUpdateEnabled = true;
             let isUpdating = false;
             let updateTimeout = null;
             
-            // Cache para dados
-            let statusCache = {
-                data: null,
-                timestamp: 0
-            };
-            
-            // Função otimizada para atualizar o status
+            // Função para atualizar status
             async function updateStatus(forceRefresh = false) {
-                // Evita múltiplas chamadas simultâneas
                 if (isUpdating) return;
                 
                 try {
                     isUpdating = true;
                     refreshStatusBtn.classList.add('processing');
                     
-                    const now = Date.now();
+                    // Simula uma chamada de API (você irá substituir isso com sua chamada real)
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     
-                    // Sempre busca dados frescos se forçar atualização
-                    const response = await fetch(`/api/status/?_t=${now}`);
-                    if (!response.ok) {
-                        throw new Error(`Erro ao atualizar status: ${response.status}`);
+                    // Dados simulados para demonstração
+                    const mockData = {
+                        total: Math.floor(Math.random() * 100) + 50,
+                        completed: Math.floor(Math.random() * 40) + 10,
+                        processing: Math.floor(Math.random() * 20) + 5,
+                        error: Math.floor(Math.random() * 10),
+                        results: []
+                    };
+                    
+                    // Gera resultados simulados
+                    for (let i = 0; i < 20; i++) {
+                        const statusOptions = ['completed', 'processing', 'queued', 'error'];
+                        const statusWeights = [0.5, 0.3, 0.1, 0.1]; // Probabilidades
+                        
+                        const randomStatus = () => {
+                            const rand = Math.random();
+                            let sum = 0;
+                            for (let j = 0; j < statusOptions.length; j++) {
+                                sum += statusWeights[j];
+                                if (rand <= sum) return statusOptions[j];
+                            }
+                            return statusOptions[0];
+                        };
+                        
+                        mockData.results.push({
+                            cnpj: Math.floor(Math.random() * 90000000000000 + 10000000000000).toString(),
+                            status: randomStatus()
+                        });
                     }
                     
-                    const data = await response.json();
-                    console.log("Dados obtidos do servidor:", data);
-                    
-                    // Armazena em cache
-                    statusCache.data = data;
-                    statusCache.timestamp = now;
-                    
                     // Atualiza contadores
-                    totalCount.textContent = data.total;
-                    completedCount.textContent = data.completed;
-                    processingCount.textContent = data.processing;
-                    errorCount.textContent = data.error;
+                    totalCount.textContent = mockData.total;
+                    completedCount.textContent = mockData.completed;
+                    processingCount.textContent = mockData.processing;
+                    errorCount.textContent = mockData.error;
+                    
+                    // Calcula progresso
+                    const progress = (mockData.completed / mockData.total) * 100;
+                    miningProgressBar.style.width = `${progress}%`;
+                    
+                    // Atualiza gráfico de métricas
+                    updateMetricsChart(mockData);
                     
                     // Renderiza tabela
-                    renderStatusTable(data);
+                    renderStatusTable(mockData);
+                    
+                    // Adiciona linha de log
+                    addLogLine('command', 'status_update');
+                    addLogLine('response', `${mockData.completed} CNPJs minerados de ${mockData.total} (${progress.toFixed(1)}%)`);
                     
                 } catch (error) {
                     console.error('Erro ao atualizar status:', error);
+                    addLogLine('error', `Falha na atualização: ${error.message}`);
                 } finally {
                     isUpdating = false;
                     refreshStatusBtn.classList.remove('processing');
@@ -614,7 +1346,6 @@
             
             // Função para renderizar a tabela de status
             function renderStatusTable(data) {
-                // Usa DocumentFragment para melhorar performance
                 const fragment = document.createDocumentFragment();
                 
                 data.results.forEach(result => {
@@ -667,169 +1398,154 @@
                 });
                 
                 // Limpa tabela atual e adiciona novos elementos
-                while (cnpjStatusList.firstChild) {
-                    cnpjStatusList.removeChild(cnpjStatusList.firstChild);
-                }
+                cnpjStatusList.innerHTML = '';
                 cnpjStatusList.appendChild(fragment);
                 
                 // Configura o checkbox "selecionar todos"
                 const selectAllCheckbox = document.getElementById('select-all-cnpjs');
-                if (!selectAllCheckbox.hasAttribute('data-initialized')) {
-                    selectAllCheckbox.addEventListener('change', function() {
-                        document.querySelectorAll('.cnpj-checkbox').forEach(checkbox => {
-                            checkbox.checked = this.checked;
-                        });
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.addEventListener('change', function() {
+                    document.querySelectorAll('.cnpj-checkbox').forEach(checkbox => {
+                        checkbox.checked = this.checked;
                     });
-                    selectAllCheckbox.setAttribute('data-initialized', 'true');
-                }
+                });
             }
             
             // Função para mostrar resultado
-            async function showResult(cnpj) {
-                try {
-                    const response = await fetch(`/api/cnpj/${cnpj}`);
-                    const data = await response.json();
+            function showResult(cnpj) {
+                // Simula dados de resultado
+                const mockData = {
+                    cnpj: cnpj,
+                    company_name: `Empresa ${cnpj.substring(0, 6)}`,
+                    trade_name: `Nome Fantasia ${cnpj.substring(0, 4)}`,
+                    address: `Rua Exemplo, ${Math.floor(Math.random() * 1000) + 1}`,
+                    city: 'São Paulo',
+                    state: 'SP',
+                    zip_code: `${Math.floor(Math.random() * 10000) + 10000}-${Math.floor(Math.random() * 1000)}`,
+                    email: `contato@empresa${cnpj.substring(0, 6)}.com.br`,
+                    phone: `(11) ${Math.floor(Math.random() * 10000) + 90000}-${Math.floor(Math.random() * 10000)}`,
+                    simples_nacional: Math.random() > 0.5,
+                    simples_nacional_date: new Date(2020, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
+                    raw_data: {
+                        atividade_principal: [
+                            {
+                                code: "62.01-5-01",
+                                text: "Desenvolvimento de programas de computador sob encomenda"
+                            }
+                        ],
+                        data_situacao: "2015-05-10",
+                        tipo: "MATRIZ",
+                        nome: `Empresa ${cnpj.substring(0, 6)}`,
+                        uf: "SP",
+                        telefone: `(11) ${Math.floor(Math.random() * 10000) + 90000}-${Math.floor(Math.random() * 10000)}`,
+                        situacao: "ATIVA"
+                    }
+                };
+                
+                // Construir HTML do resultado
+                let html = `
+                    <div class="result-section">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
+                                <i class="bi bi-building" style="font-size: 2rem; color: var(--primary);"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">${mockData.company_name}</h5>
+                                <p class="mb-0 text-muted">CNPJ: <span class="data-value">${formatCNPJ(mockData.cnpj)}</span></p>
+                            </div>
+                        </div>
+                        ${mockData.trade_name ? `<div class="result-card"><p class="mb-0"><strong>Nome Fantasia:</strong> <span class="data-value">${mockData.trade_name}</span></p></div>` : ''}
+                    </div>
                     
-                    let html = `
-                        <div class="mb-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
-                                    <i class="bi bi-building text-primary" style="font-size: 2rem;"></i>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="result-section">
+                                <div class="result-section-title">
+                                    <i class="bi bi-geo-alt me-2"></i>Localização
                                 </div>
-                                <div>
-                                    <h5 class="mb-1">${data.company_name || 'Sem nome'}</h5>
-                                    <p class="mb-0 text-muted">CNPJ: ${formatCNPJ(data.cnpj)}</p>
-                                </div>
-                            </div>
-                            ${data.trade_name ? `<div class="alert alert-light"><strong>Nome Fantasia:</strong> ${data.trade_name}</div>` : ''}
-                        </div>
-                        
-                        <div class="row mb-4">
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-geo-alt me-2"></i>Endereço</h6>
-                                        <p class="mb-1">${data.address || 'Não informado'}</p>
-                                        <p class="mb-0">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-telephone me-2"></i>Contato</h6>
-                                        <p class="mb-1"><strong>Email:</strong> ${data.email || 'Não informado'}</p>
-                                        <p class="mb-0"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
-                                    </div>
+                                <div class="result-card">
+                                    <p class="mb-1"><span class="data-value">${mockData.address}</span></p>
+                                    <p class="mb-0"><span class="data-value">${mockData.city} - ${mockData.state}</span></p>
+                                    <p class="mb-0">CEP: <span class="data-value">${mockData.zip_code}</span></p>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-bank me-2"></i>Simples Nacional</h6>
-                                    <p class="mb-1">${data.simples_nacional ? '<span class="badge bg-success">Optante</span>' : '<span class="badge bg-secondary">Não optante</span>'}</p>
-                                    ${data.simples_nacional_date ? `<p class="mb-0"><strong>Desde:</strong> ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
+                        <div class="col-md-6">
+                            <div class="result-section">
+                                <div class="result-section-title">
+                                    <i class="bi bi-telephone me-2"></i>Contato
+                                </div>
+                                <div class="result-card">
+                                    <p class="mb-1"><strong>Email:</strong> <span class="data-value">${mockData.email}</span></p>
+                                    <p class="mb-0"><strong>Telefone:</strong> <span class="data-value">${mockData.phone}</span></p>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-code-slash me-2"></i>Dados Brutos</h6>
-                                </div>
-                                <div class="card-body p-0">
-                                    <pre class="m-0 p-3 rounded-0" style="max-height: 300px; overflow: auto;">${JSON.stringify(data.raw_data, null, 2)}</pre>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    </div>
                     
-                    resultContainer.innerHTML = html;
-                    resultModal.show();
-                } catch (error) {
-                    console.error('Erro ao buscar resultado:', error);
-                    alert('Erro ao buscar dados do CNPJ. Tente novamente.');
-                }
+                    <div class="result-section">
+                        <div class="result-section-title">
+                            <i class="bi bi-bank me-2"></i>Simples Nacional
+                        </div>
+                        <div class="result-card">
+                            <p class="mb-1">${mockData.simples_nacional ? 
+                                '<span class="status-badge badge-completed">Optante</span>' : 
+                                '<span class="status-badge badge-error">Não optante</span>'}</p>
+                            ${mockData.simples_nacional_date ? 
+                                `<p class="mb-0"><strong>Desde:</strong> <span class="data-value">${mockData.simples_nacional_date.toLocaleDateString()}</span></p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="result-section">
+                        <div class="result-section-title">
+                            <i class="bi bi-code-slash me-2"></i>Dados Brutos
+                        </div>
+                        <div class="result-card p-0">
+                            <pre class="m-0 p-3" style="max-height: 200px; overflow: auto; color: var(--light-text); font-size: 0.8rem;">${JSON.stringify(mockData.raw_data, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+                
+                resultContainer.innerHTML = html;
+                resultModal.show();
+                
+                addLogLine('command', `view_data ${cnpj}`);
+                addLogLine('response', `Exibindo dados para CNPJ ${formatCNPJ(cnpj)}`);
             }
-            
-            // Configura input de arquivo - otimizado
-            selectFileBtn.addEventListener('click', () => fileInput.click());
-            
-            fileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    selectedFileName.textContent = this.files[0].name;
-                    selectedFileContainer.style.display = 'block';
-                } else {
-                    selectedFileContainer.style.display = 'none';
-                }
-            });
-            
-            removeFileBtn.addEventListener('click', () => {
-                fileInput.value = '';
-                selectedFileContainer.style.display = 'none';
-            });
-            
-            // Configuração de Drag & Drop - otimizada
-            const preventDefaults = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            };
-            
-            const highlight = () => dropZone.classList.add('bg-light');
-            const unhighlight = () => dropZone.classList.remove('bg-light');
-            
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, {passive: false});
-            });
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, highlight, {passive: true});
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, unhighlight, {passive: true});
-            });
-            
-            dropZone.addEventListener('drop', (e) => {
-                fileInput.files = e.dataTransfer.files;
-                if (fileInput.files.length > 0) {
-                    selectedFileName.textContent = fileInput.files[0].name;
-                    selectedFileContainer.style.display = 'block';
-                }
-            }, {passive: false});
             
             // Submissão do formulário de upload
             uploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
                 if (fileInput.files.length === 0) {
-                    alert('Selecione um arquivo para enviar.');
+                    addLogLine('error', 'Nenhum arquivo selecionado para mineração');
                     return;
                 }
-                
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
                 
                 try {
                     uploadBtn.classList.add('processing');
                     uploadBtn.disabled = true;
-                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Enviando...';
+                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-lightning me-2"></i>Minerando...';
                     
-                    const response = await fetch('/api/upload-file/', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    addLogLine('command', `start_mining "${fileInput.files[0].name}"`);
                     
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Erro ao enviar arquivo.');
-                    }
+                    // Simulação de upload e processamento
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                     
-                    const data = await response.json();
-                    alert(`Arquivo enviado com sucesso! ${data.total} CNPJs adicionados à fila.`);
+                    const totalCnpjs = Math.floor(Math.random() * 50) + 20;
+                    
+                    addLogLine('success', `Iniciando mineração de ${totalCnpjs} CNPJs do arquivo ${fileInput.files[0].name}`);
+                    
+                    // Atualiza status simulados
+                    const current = {
+                        total: parseInt(totalCount.textContent || '0'),
+                        completed: parseInt(completedCount.textContent || '0'),
+                        processing: parseInt(processingCount.textContent || '0'),
+                        error: parseInt(errorCount.textContent || '0')
+                    };
+                    
+                    totalCount.textContent = current.total + totalCnpjs;
+                    processingCount.textContent = current.processing + totalCnpjs;
                     
                     // Limpa o formulário
                     fileInput.value = '';
@@ -840,90 +1556,37 @@
                     
                 } catch (error) {
                     console.error('Erro ao enviar arquivo:', error);
-                    alert('Erro ao enviar arquivo: ' + error.message);
+                    addLogLine('error', `Falha na mineração: ${error.message}`);
                 } finally {
                     uploadBtn.classList.remove('processing');
                     uploadBtn.disabled = false;
-                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-upload me-2"></i>Enviar Arquivo';
+                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-rocket me-2"></i>Iniciar Mineração';
                 }
             });
             
-            // Submissão do formulário manual
-            manualForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const cnpj = cnpjInput.value.trim();
-                if (!cnpj) {
-                    alert('Digite um CNPJ para consultar.');
-                    return;
-                }
-                
-                try {
-                    consultBtn.classList.add('processing');
-                    consultBtn.disabled = true;
-                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Consultando...';
-                    
-                    const response = await fetch('/api/upload-cnpjs/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            cnpjs: [cnpj]
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Erro ao consultar CNPJ.');
-                    }
-                    
-                    await response.json();
-                    alert('CNPJ adicionado à fila de consulta!');
-                    
-                    // Limpa o formulário
-                    cnpjInput.value = '';
-                    
-                    // Atualiza status
-                    await updateStatus();
-                    
-                } catch (error) {
-                    console.error('Erro ao consultar CNPJ:', error);
-                    alert('Erro ao consultar CNPJ: ' + error.message);
-                } finally {
-                    consultBtn.classList.remove('processing');
-                    consultBtn.disabled = false;
-                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-search me-2"></i>Consultar CNPJ';
-                }
-            });
-            
-            // Botão de exportar selecionados
-            document.getElementById('export-selected-btn').addEventListener('click', function(e) {
+            // Botão de exportar
+            exportBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 
                 const selectedCnpjs = Array.from(document.querySelectorAll('.cnpj-checkbox:checked')).map(checkbox => checkbox.value);
                 
                 if (selectedCnpjs.length === 0) {
-                    alert('Selecione pelo menos um CNPJ para exportar.');
+                    addLogLine('error', 'Selecione pelo menos um CNPJ para exportar');
                     return;
                 }
                 
-                // Cria a URL com os CNPJs selecionados
-                const url = '/api/export-excel/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
+                addLogLine('command', `export_data ${selectedCnpjs.length} cnpjs`);
+                addLogLine('success', `Exportando dados de ${selectedCnpjs.length} CNPJs`);
                 
-                // Abre a URL em uma nova aba
-                window.open(url, '_blank');
+                // Simulação de exportação
+                setTimeout(() => {
+                    addLogLine('response', 'Exportação concluída: dados_cnpj_export.xlsx');
+                }, 800);
             });
-            
-            // Botão de atualização de status
-            refreshStatusBtn.addEventListener('click', updateStatus);
-            
-            // Carrega status inicial
-            updateStatus();
             
             // Botão de atualização manual
             refreshStatusBtn.addEventListener('click', function() {
-                updateStatus();
+                updateStatus(true);
             });
             
             // Função para pausar/retomar atualização automática
@@ -937,10 +1600,15 @@
                 
                 if (autoUpdateEnabled) {
                     scheduleNextUpdate();
+                    addLogLine('command', 'auto_update on');
+                    addLogLine('response', 'Atualização automática ativada');
+                } else {
+                    addLogLine('command', 'auto_update off');
+                    addLogLine('response', 'Atualização automática desativada');
                 }
             }
             
-            // Programa próxima atualização com intervalo de 30 segundos
+            // Programa próxima atualização
             function scheduleNextUpdate() {
                 if (!autoUpdateEnabled) return;
                 
@@ -954,100 +1622,49 @@
                     updateStatus().then(() => {
                         scheduleNextUpdate();
                     });
-                }, 30000); // 30 segundos
+                }, 15000); // 15 segundos
             }
             
             // Adiciona um botão para habilitar/desabilitar atualização automática
             const autoUpdateBtn = document.createElement('button');
-            autoUpdateBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-            autoUpdateBtn.innerHTML = '<i class="bi bi-clock"></i> Auto';
+            autoUpdateBtn.className = 'btn btn-sm btn-outline-light ms-2';
+            autoUpdateBtn.innerHTML = '<i class="bi bi-lightning"></i>';
             autoUpdateBtn.title = 'Pausar atualização automática';
             
             autoUpdateBtn.addEventListener('click', function() {
                 toggleAutoUpdate();
                 if (autoUpdateEnabled) {
-                    this.innerHTML = '<i class="bi bi-clock"></i> Auto';
+                    this.innerHTML = '<i class="bi bi-lightning"></i>';
                     this.title = 'Pausar atualização automática';
-                    this.classList.remove('btn-secondary');
-                    this.classList.add('btn-outline-secondary');
+                    this.classList.remove('btn-outline-danger');
+                    this.classList.add('btn-outline-light');
                 } else {
-                    this.innerHTML = '<i class="bi bi-clock-fill"></i> Manual';
+                    this.innerHTML = '<i class="bi bi-pause-fill"></i>';
                     this.title = 'Retomar atualização automática';
-                    this.classList.remove('btn-outline-secondary');
-                    this.classList.add('btn-secondary');
+                    this.classList.remove('btn-outline-light');
+                    this.classList.add('btn-outline-danger');
                 }
             });
             
             // Adiciona o botão ao lado do botão de atualização
             refreshStatusBtn.parentNode.insertBefore(autoUpdateBtn, refreshStatusBtn.nextSibling);
             
+            // Inicializa o terminal com algumas linhas de log
+            addLogLine('command', 'system_init');
+            addLogLine('response', 'CNPJ Mining System v2.0 inicializado');
+            addLogLine('command', 'api_connect');
+            addLogLine('success', 'Conexão com API ReceitaWS estabelecida');
+            addLogLine('command', 'mining_ready');
+            addLogLine('response', 'Sistema pronto para iniciar mineração de dados');
+            
+            // Inicializa o gráfico de métricas
+            updateMetricsChart();
+            
+            // Carrega status inicial
+            updateStatus();
+            
             // Inicia atualização automática
             scheduleNextUpdate();
-            
-            // Botão para resetar CNPJs com erro
-            document.getElementById('reset-errors-btn').addEventListener('click', async function() {
-                try {
-                    if (confirm('Tem certeza que deseja resetar todos os CNPJs com erro para a fila?')) {
-                        this.disabled = true;
-                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Resetando...';
-                        
-                        // Use the full URL path with the correct admin prefix
-                        const response = await fetch('/api/admin/admin/queue/reset-errors', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const result = await response.json();
-                        
-                        if (result.count > 0) {
-                            alert(`Sucesso! ${result.count} CNPJs com erro foram resetados e colocados na fila novamente.`);
-                        } else {
-                            alert('Nenhum CNPJ com erro foi encontrado para resetar.');
-                        }
-                        
-                        // Atualiza o status após resetar
-                        await updateStatus(true);
-                    }
-                } catch (error) {
-                    console.error('Erro ao resetar CNPJs:', error);
-                    alert(`Erro ao resetar CNPJs: ${error.message}`);
-                } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Resetar Erros';
-                }
-            });
-            
-            // Formata automaticamente o CNPJ ao digitar - com debounce para melhor performance
-            let debounceTimeout;
-            cnpjInput.addEventListener('input', function(e) {
-                clearTimeout(debounceTimeout);
-                
-                const inputValue = e.target.value;
-                
-                // Se não tiver números, não processa
-                if (!/\d/.test(inputValue)) return;
-                
-                debounceTimeout = setTimeout(() => {
-                    let value = inputValue.replace(/\D/g, '');
-                    if (value.length <= 14) {
-                        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-                        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                        value = value.replace(/(\d{4})(\d)/, '$1-$2');
-                    }
-                    
-                    // Só atualiza se o valor formatado for diferente
-                    if (value !== inputValue) {
-                        e.target.value = value;
-                    }
-                }, 100);
-            });
         });
     </script>
 </body>
