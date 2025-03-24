@@ -77,21 +77,37 @@ python check_queue_status.py https://seu-app.herokuapp.com 5 10
 python check_queue_status.py https://seu-app.herokuapp.com 30 0
 ```
 
-### 3. Script para Resetar CNPJs com Erro (`reset_error_cnpjs.py`)
+### 3. Script para Resetar CNPJs com Erro (`fix_error_cnpjs.py`)
 
-Este script permite resetar CNPJs com status de erro para "queued" e recolocá-los na fila de processamento.
+Este script conecta-se diretamente ao banco de dados para resetar CNPJs com status de erro para "queued" e recolocá-los na fila de processamento. Ele é mais robusto e não depende de endpoints da API.
 
 **Uso:**
 ```
-python reset_error_cnpjs.py [URL_BASE]
+python3 fix_error_cnpjs.py [opções]
 ```
 
-**Exemplo:**
+**Opções:**
+- `--db-url URL` - URL de conexão com o banco de dados (ex: postgresql://usuario:senha@host:porta/nome_banco)
+- `--api-url URL` - URL base da API para reiniciar a fila (ex: https://seu-app.herokuapp.com)
+- `--no-restart` - Não reiniciar a fila após resetar os CNPJs
+- `--verbose` ou `-v` - Mostrar informações detalhadas sobre os CNPJs com erro
+
+**Exemplos:**
 ```
-python reset_error_cnpjs.py https://seu-app.herokuapp.com
+# Usando a URL do banco de dados do arquivo .env e reiniciando a fila
+python3 fix_error_cnpjs.py --api-url https://seu-app.herokuapp.com
+
+# Especificando a URL do banco de dados diretamente
+python3 fix_error_cnpjs.py --db-url postgresql://usuario:senha@host:porta/nome_banco
+
+# Mostrando detalhes dos CNPJs com erro
+python3 fix_error_cnpjs.py --verbose
+
+# Apenas resetando os CNPJs sem reiniciar a fila
+python3 fix_error_cnpjs.py --no-restart
 ```
 
-Este script é útil quando há CNPJs que falharam durante o processamento e você deseja tentar processá-los novamente.
+Este script é a maneira recomendada para lidar com CNPJs que falharam durante o processamento, pois conecta-se diretamente ao banco de dados e não depende de endpoints da API.
 
 ### 4. Script de Atualização (`deploy_update.sh`)
 
@@ -108,7 +124,7 @@ O script irá solicitar o nome do seu app no Heroku e cuidará do processo de de
 
 1. Após o deploy das alterações, use o script `restart_queue.py` para reiniciar o processamento da fila
 2. Use o script `check_queue_status.py` para monitorar o status da fila e verificar se as alterações estão funcionando corretamente
-3. Se houver CNPJs com erro, use o script `reset_error_cnpjs.py` para recolocá-los na fila
+3. Se houver CNPJs com erro, use o script `fix_error_cnpjs.py` para recolocá-los na fila
 4. Se ainda houver problemas, verifique os logs do Heroku para identificar possíveis erros
 
 ## Configurações Recomendadas
