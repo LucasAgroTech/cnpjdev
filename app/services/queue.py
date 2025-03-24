@@ -110,50 +110,36 @@ class CNPJQueue:
                 
             self._last_cleanup = now
             
-            # Encontra CNPJs que estão em "processing" por mais de 3 minutos (reduzido de 5)
-            timeout_threshold = now - timedelta(minutes=3)
+            # Encontra CNPJs que estão em "processing" por mais de 5 minutos
+            timeout_threshold = now - timedelta(minutes=5)
             
-            # Usa uma transação para garantir atomicidade
-            count = 0
-            try:
-                # Inicia uma transação
-                self.db.begin()
-                
-                # Usa FOR UPDATE para bloquear as linhas durante a atualização
-                stuck_queries = self.db.query(CNPJQuery).filter(
-                    and_(
-                        CNPJQuery.status == "processing",
-                        CNPJQuery.updated_at < timeout_threshold
-                    )
-                ).with_for_update().all()
-                
-                if not stuck_queries:
-                    logger.debug("Nenhum CNPJ preso em processamento encontrado")
-                    self.db.rollback()  # Não há nada para atualizar, faz rollback da transação
-                    return 0
-                
-                # Redefine o status para "error" ou mantém "rate_limited"
-                for query in stuck_queries:
-                    # Verifica se o erro está relacionado a limite de requisições
-                    if query.error_message and "Limite de requisições excedido" in query.error_message:
-                        query.status = "rate_limited"
-                        logger.warning(f"CNPJ {query.cnpj} mantido como rate_limited após timeout")
-                    else:
-                        query.status = "error"
-                        query.error_message = "Processamento interrompido por timeout"
-                    
-                    query.updated_at = now
-                    count += 1
-                
-                # Commit da transação
-                self.db.commit()
-                logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
-            except Exception as e:
-                # Em caso de erro, faz rollback da transação
-                self.db.rollback()
-                logger.error(f"Erro na transação ao limpar CNPJs presos: {str(e)}")
+            stuck_queries = self.db.query(CNPJQuery).filter(
+                and_(
+                    CNPJQuery.status == "processing",
+                    CNPJQuery.updated_at < timeout_threshold
+                )
+            ).all()
+            
+            if not stuck_queries:
+                logger.debug("Nenhum CNPJ preso em processamento encontrado")
                 return 0
+            
+            # Redefine o status para "error" ou mantém "rate_limited"
+            count = 0
+            for query in stuck_queries:
+                # Verifica se o erro está relacionado a limite de requisições
+                if query.error_message and "Limite de requisições excedido" in query.error_message:
+                    query.status = "rate_limited"
+                    logger.warning(f"CNPJ {query.cnpj} mantido como rate_limited após timeout")
+                else:
+                    query.status = "error"
+                    query.error_message = "Processamento interrompido por timeout"
                 
+                query.updated_at = now
+                count += 1
+            
+            self.db.commit()
+            logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
             return count
             
         except Exception as e:
@@ -215,7 +201,7 @@ class CNPJQueue:
     
     async def add_to_queue(self, cnpjs: List[str]) -> None:
         """
-        Adiciona CNPJs à fila de processamento, evitando duplicatas
+        Adiciona CNPJs à fila de processamento
         
         Args:
             cnpjs: Lista de CNPJs para processar
@@ -225,49 +211,22 @@ class CNPJQueue:
         # Obtém a fila
         queue = await self.queue
         
-        # Lista para armazenar CNPJs realmente adicionados
-        added_cnpjs = []
-        
         for cnpj in cnpjs:
             # Limpa o CNPJ e adiciona formatação
             cnpj_clean = ''.join(filter(str.isdigit, cnpj))
             
-            # Verifica se o CNPJ já está na fila ou já foi processado recentemente
-            existing_query = self.db.query(CNPJQuery).filter(
-                CNPJQuery.cnpj == cnpj_clean,
-                CNPJQuery.status.in_(["queued", "processing", "completed"])
-            ).first()
-            
-            if existing_query and existing_query.status == "completed":
-                # Se já foi processado com sucesso, verifica se foi recente (últimos 7 dias)
-                if existing_query.updated_at > datetime.utcnow() - timedelta(days=7):
-                    logger.info(f"CNPJ {cnpj_clean} já processado recentemente, ignorando")
-                    continue
-            
-            if existing_query and existing_query.status in ["queued", "processing"]:
-                logger.info(f"CNPJ {cnpj_clean} já está na fila ou em processamento, ignorando")
-                continue
-            
-            # Se chegou aqui, o CNPJ pode ser adicionado ou atualizado
-            if existing_query:
-                # Atualiza o registro existente
-                existing_query.status = "queued"
-                existing_query.error_message = None
-                existing_query.updated_at = datetime.utcnow()
-            else:
-                # Cria um novo registro
-                new_query = CNPJQuery(cnpj=cnpj_clean, status="queued")
-                self.db.add(new_query)
+            # Cria um registro de consulta no banco de dados
+            query = CNPJQuery(cnpj=cnpj_clean, status="queued")
+            self.db.add(query)
             
             # Adiciona à fila assíncrona
             await queue.put(cnpj_clean)
-            added_cnpjs.append(cnpj_clean)
         
         self.db.commit()
-        logger.info(f"{len(added_cnpjs)} CNPJs adicionados à fila com sucesso")
+        logger.info(f"{len(cnpjs)} CNPJs adicionados à fila com sucesso")
         
-        # Inicia o processamento se não estiver em execução e houver CNPJs adicionados
-        if added_cnpjs and not self.processing:
+        # Inicia o processamento se não estiver em execução
+        if not self.processing:
             logger.info("Iniciando processamento da fila")
             asyncio.create_task(self.process_queue())
     
