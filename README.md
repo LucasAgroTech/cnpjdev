@@ -1,12 +1,15 @@
 # CNPJ Consulta
 
-Sistema automatizado de consulta de CNPJs via API da ReceitaWS, com armazenamento em PostgreSQL.
+Sistema automatizado de consulta de CNPJs via múltiplas APIs (ReceitaWS, CNPJ.ws e CNPJa Open), com armazenamento em PostgreSQL.
 ![Dashboard](dashboard.png)
 
 ## Características
 
 - Processamento assíncrono de consultas de CNPJ
+- Sistema de rotação entre múltiplas APIs para maximizar o throughput
+- Processamento de até 11 CNPJs por minuto (3 + 3 + 5 de cada API)
 - Limitação inteligente de requisições por minuto para evitar bloqueios
+- Fallback automático entre APIs em caso de falha ou limite de requisições
 - Importação de planilhas com lista de CNPJs
 - Armazenamento dos resultados em PostgreSQL no Heroku
 - Interface web para acompanhamento das consultas
@@ -52,7 +55,25 @@ Crie um arquivo `.env` baseado no exemplo `.env.example`:
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` com suas chaves de API e configurações do banco de dados.
+Edite o arquivo `.env` com suas configurações:
+
+```
+# Configuração das APIs
+RECEITAWS_ENABLED=True
+CNPJWS_ENABLED=True
+CNPJA_OPEN_ENABLED=True
+RECEITAWS_REQUESTS_PER_MINUTE=3
+CNPJWS_REQUESTS_PER_MINUTE=3
+CNPJA_OPEN_REQUESTS_PER_MINUTE=5
+
+# Banco de dados
+DATABASE_URL=postgresql://usuario:senha@host:porta/nome_banco
+
+# Outras configurações
+DEBUG=False
+AUTO_RESTART_QUEUE=True
+MAX_RETRY_ATTEMPTS=3
+```
 
 ### 5. Execute as migrações do banco de dados
 
@@ -85,7 +106,14 @@ heroku addons:create heroku-postgresql:mini
 ### 3. Configure as variáveis de ambiente
 
 ```bash
-heroku config:set REQUESTS_PER_MINUTE=3
+heroku config:set RECEITAWS_ENABLED=True
+heroku config:set CNPJWS_ENABLED=True
+heroku config:set CNPJA_OPEN_ENABLED=True
+heroku config:set RECEITAWS_REQUESTS_PER_MINUTE=3
+heroku config:set CNPJWS_REQUESTS_PER_MINUTE=3
+heroku config:set CNPJA_OPEN_REQUESTS_PER_MINUTE=5
+heroku config:set AUTO_RESTART_QUEUE=True
+heroku config:set MAX_RETRY_ATTEMPTS=3
 ```
 
 ### 4. Implante o código
@@ -141,9 +169,50 @@ cnpj-consulta/
 └── runtime.txt            # Versão do Python para o Heroku
 ```
 
-## Limitações da API
+## Sistema de Múltiplas APIs
 
-A API da ReceitaWS tem limite de 3 requisições por minuto. Este sistema está configurado para respeitar esse limite e evitar bloqueios, controlando a taxa de requisições.
+O sistema utiliza três APIs diferentes para consulta de CNPJs, aumentando significativamente a capacidade de processamento e adicionando redundância.
+
+### APIs Suportadas
+
+- **ReceitaWS**: 3 requisições por minuto
+- **CNPJ.ws**: 3 requisições por minuto
+- **CNPJa Open**: 5 requisições por minuto
+
+### Capacidade Total
+
+Com as três APIs habilitadas, o sistema pode processar até **11 CNPJs por minuto**, um aumento significativo em relação ao uso de apenas uma API.
+
+### Como Funciona o Sistema de Rotação
+
+1. Quando uma consulta de CNPJ é solicitada, o sistema seleciona aleatoriamente uma das APIs habilitadas
+2. Se a API selecionada estiver no limite de requisições ou falhar, o sistema automaticamente tenta outra API
+3. O sistema mantém controle das requisições feitas para cada API, respeitando seus limites individuais
+4. Os resultados são normalizados para um formato padrão, independentemente da API utilizada
+
+### Configuração das APIs
+
+Cada API pode ser habilitada ou desabilitada individualmente através das variáveis de ambiente:
+
+- `RECEITAWS_ENABLED`: Habilita/desabilita a API ReceitaWS
+- `CNPJWS_ENABLED`: Habilita/desabilita a API CNPJ.ws
+- `CNPJA_OPEN_ENABLED`: Habilita/desabilita a API CNPJa Open
+
+Os limites de requisições também podem ser ajustados:
+
+- `RECEITAWS_REQUESTS_PER_MINUTE`: Limite para ReceitaWS (padrão: 3)
+- `CNPJWS_REQUESTS_PER_MINUTE`: Limite para CNPJ.ws (padrão: 3)
+- `CNPJA_OPEN_REQUESTS_PER_MINUTE`: Limite para CNPJa Open (padrão: 5)
+
+## Limitações das APIs
+
+Cada API tem seu próprio limite de requisições por minuto:
+
+- ReceitaWS: 3 requisições por minuto
+- CNPJ.ws: 3 requisições por minuto
+- CNPJa Open: 5 requisições por minuto
+
+O sistema está configurado para respeitar esses limites e evitar bloqueios, controlando a taxa de requisições para cada API individualmente.
 
 ## Persistência de Processamento
 

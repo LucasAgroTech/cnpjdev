@@ -430,30 +430,49 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     Obtém status de lote para uma lista de CNPJs
     """
     statuses = []
-    total = len(cnpjs)
+    
+    # Contadores para cada status
     completed = 0
     processing = 0
     error = 0
     queued = 0
     rate_limited = 0
     
-    for cnpj in cnpjs:
-        query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
-        
-        if query:
-            status = query.status
-            error_message = query.error_message
+    # Dicionário para armazenar o status mais recente de cada CNPJ para exibição
+    latest_status = {}
+    
+    # Busca todas as consultas para os CNPJs fornecidos
+    all_queries = db.query(CNPJQuery).filter(CNPJQuery.cnpj.in_(cnpjs)).all()
+    
+    # Conta o total de consultas (pode ser maior que o número de CNPJs únicos)
+    total = len(all_queries)
+    
+    # Conta cada consulta por status
+    for query in all_queries:
+        if query.status == "completed":
+            completed += 1
+        elif query.status == "processing":
+            processing += 1
+        elif query.status == "error":
+            error += 1
+        elif query.status == "queued":
+            queued += 1
+        elif query.status == "rate_limited":
+            rate_limited += 1
             
-            if status == "completed":
-                completed += 1
-            elif status == "processing":
-                processing += 1
-            elif status == "error":
-                error += 1
-            elif status == "queued":
-                queued += 1
-            elif status == "rate_limited":
-                rate_limited += 1
+        # Armazena o status mais recente para cada CNPJ
+        if query.cnpj not in latest_status or query.created_at > latest_status[query.cnpj]['created_at']:
+            latest_status[query.cnpj] = {
+                'status': query.status,
+                'error_message': query.error_message,
+                'created_at': query.created_at
+            }
+    
+    # Cria a lista de status para cada CNPJ único
+    for cnpj in cnpjs:
+        if cnpj in latest_status:
+            status = latest_status[cnpj]['status']
+            error_message = latest_status[cnpj]['error_message']
         else:
             status = "unknown"
             error_message = None
