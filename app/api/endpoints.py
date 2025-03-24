@@ -276,6 +276,51 @@ async def restart_queue_processing(
     
     return {"message": "Reinicialização do processamento iniciada"}
 
+@admin_router.post("/queue/reset-errors")
+async def reset_error_cnpjs(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    api_client: ReceitaWSClient = Depends(get_api_client)
+):
+    """
+    Reseta CNPJs com status de erro para 'queued' e reinicia o processamento
+    """
+    logger.info("Resetando CNPJs com erro para a fila")
+    
+    # Encontra todos os CNPJs com status 'error'
+    error_queries = db.query(CNPJQuery).filter(CNPJQuery.status == "error").all()
+    
+    if not error_queries:
+        logger.info("Nenhum CNPJ com erro encontrado")
+        return {"message": "Nenhum CNPJ com erro encontrado", "count": 0}
+    
+    # Atualiza o status para 'queued'
+    count = 0
+    for query in error_queries:
+        query.status = "queued"
+        query.error_message = None
+        query.updated_at = datetime.utcnow()
+        count += 1
+    
+    db.commit()
+    logger.info(f"{count} CNPJs com erro resetados para 'queued'")
+    
+    # Obtém a instância singleton do gerenciador de fila
+    queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
+    
+    # Função para carregar CNPJs pendentes em background
+    async def load_and_process():
+        try:
+            await queue_manager.load_pending_cnpjs()
+            logger.info(f"Processamento reiniciado após resetar {count} CNPJs com erro")
+        except Exception as e:
+            logger.error(f"Erro ao reiniciar processamento: {str(e)}")
+    
+    # Agenda o processamento em background usando BackgroundTasks
+    background_tasks.add_task(load_and_process)
+    
+    return {"message": f"{count} CNPJs com erro resetados para a fila", "count": count}
+
 def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     """
     Obtém status de lote para uma lista de CNPJs

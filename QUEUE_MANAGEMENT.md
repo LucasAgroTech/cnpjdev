@@ -36,7 +36,7 @@ O sistema estava acumulando muitos CNPJs com status "Em Processo", o que dificul
 
 ## Ferramentas de Gerenciamento
 
-Foram criadas três ferramentas para ajudar no gerenciamento da fila:
+Foram criadas quatro ferramentas para ajudar no gerenciamento da fila:
 
 ### 1. Script de Reinício da Fila (`restart_queue.py`)
 
@@ -77,7 +77,23 @@ python check_queue_status.py https://seu-app.herokuapp.com 5 10
 python check_queue_status.py https://seu-app.herokuapp.com 30 0
 ```
 
-### 3. Script de Atualização (`deploy_update.sh`)
+### 3. Script para Resetar CNPJs com Erro (`reset_error_cnpjs.py`)
+
+Este script permite resetar CNPJs com status de erro para "queued" e recolocá-los na fila de processamento.
+
+**Uso:**
+```
+python reset_error_cnpjs.py [URL_BASE]
+```
+
+**Exemplo:**
+```
+python reset_error_cnpjs.py https://seu-app.herokuapp.com
+```
+
+Este script é útil quando há CNPJs que falharam durante o processamento e você deseja tentar processá-los novamente.
+
+### 4. Script de Atualização (`deploy_update.sh`)
 
 Este script facilita o deploy das alterações no Heroku.
 
@@ -92,7 +108,8 @@ O script irá solicitar o nome do seu app no Heroku e cuidará do processo de de
 
 1. Após o deploy das alterações, use o script `restart_queue.py` para reiniciar o processamento da fila
 2. Use o script `check_queue_status.py` para monitorar o status da fila e verificar se as alterações estão funcionando corretamente
-3. Se ainda houver problemas, verifique os logs do Heroku para identificar possíveis erros
+3. Se houver CNPJs com erro, use o script `reset_error_cnpjs.py` para recolocá-los na fila
+4. Se ainda houver problemas, verifique os logs do Heroku para identificar possíveis erros
 
 ## Configurações Recomendadas
 
