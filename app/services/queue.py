@@ -20,6 +20,13 @@ _queue_lock = asyncio.Lock()
 class CNPJQueue:
     """
     Gerenciador de fila para consultas de CNPJ
+    
+    Status possíveis:
+    - queued: CNPJ na fila para processamento
+    - processing: CNPJ em processamento
+    - completed: CNPJ processado com sucesso
+    - error: Erro permanente no processamento (CNPJ não encontrado, etc)
+    - rate_limited: Erro temporário por limite de requisições excedido
     """
     
     @classmethod
@@ -117,11 +124,17 @@ class CNPJQueue:
                 logger.debug("Nenhum CNPJ preso em processamento encontrado")
                 return 0
             
-            # Redefine o status para "error"
+            # Redefine o status para "error" ou mantém "rate_limited"
             count = 0
             for query in stuck_queries:
-                query.status = "error"
-                query.error_message = "Processamento interrompido por timeout"
+                # Verifica se o erro está relacionado a limite de requisições
+                if query.error_message and "Limite de requisições excedido" in query.error_message:
+                    query.status = "rate_limited"
+                    logger.warning(f"CNPJ {query.cnpj} mantido como rate_limited após timeout")
+                else:
+                    query.status = "error"
+                    query.error_message = "Processamento interrompido por timeout"
+                
                 query.updated_at = now
                 count += 1
             
@@ -148,11 +161,12 @@ class CNPJQueue:
         
         logger.info("Carregando CNPJs pendentes do banco de dados")
         
-        # Busca CNPJs com status "queued" ou "processing"
+        # Busca CNPJs com status "queued", "processing" ou "rate_limited"
         pending_queries = self.db.query(CNPJQuery).filter(
             or_(
                 CNPJQuery.status == "queued",
-                CNPJQuery.status == "processing"
+                CNPJQuery.status == "processing",
+                CNPJQuery.status == "rate_limited"
             )
         ).order_by(CNPJQuery.created_at.asc()).all()
         
@@ -166,8 +180,8 @@ class CNPJQueue:
         # Adiciona CNPJs à fila
         count = 0
         for query in pending_queries:
-            # Atualiza status para "queued" (caso esteja como "processing")
-            if query.status == "processing":
+            # Atualiza status para "queued" (caso esteja como "processing" ou "rate_limited")
+            if query.status in ["processing", "rate_limited"]:
                 query.status = "queued"
                 query.updated_at = datetime.utcnow()
             
@@ -300,7 +314,7 @@ class CNPJQueue:
             # Verifica se ainda há CNPJs pendentes no banco de dados
             try:
                 pending_count = self.db.query(CNPJQuery).filter(
-                    CNPJQuery.status.in_(["queued", "processing"])
+                    CNPJQuery.status.in_(["queued", "processing", "rate_limited"])
                 ).count()
                 
                 if pending_count > 0:
@@ -337,7 +351,8 @@ class CNPJQueue:
             CNPJQuery.cnpj == cnpj, 
             or_(
                 CNPJQuery.status == "queued",
-                CNPJQuery.status == "processing"
+                CNPJQuery.status == "processing",
+                CNPJQuery.status == "rate_limited"
             )
         ).first()
         
@@ -464,25 +479,40 @@ class CNPJQueue:
                     retry_count += 1
                     logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
                     
-                    # Se for a última tentativa, marca como erro
+                    # Se for a última tentativa, verifica o tipo de erro
                     if retry_count >= max_retries:
-                        logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {str(e)}")
+                        error_message = str(e)
+                        logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {error_message}")
                         logger.debug(traceback.format_exc())
                         
-                        # Atualiza o status da consulta com erro
+                        # Atualiza o status da consulta com base no tipo de erro
                         if query:
-                            query.status = "error"
-                            query.error_message = str(e)
+                            # Verifica se é um erro de limite de requisições
+                            if "Limite de requisições excedido" in error_message:
+                                query.status = "rate_limited"
+                                logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
+                            else:
+                                query.status = "error"
+                            
+                            query.error_message = error_message
                             query.updated_at = datetime.utcnow()
                             self.db.commit()
         except Exception as e:
             logger.error(f"Erro global ao processar CNPJ {cnpj}: {str(e)}")
             logger.debug(traceback.format_exc())
             
-            # Atualiza o status da consulta com erro
+            # Atualiza o status da consulta com base no tipo de erro
             if query and query.status == "processing":
-                query.status = "error"
-                query.error_message = f"Erro global: {str(e)}"
+                error_message = str(e)
+                
+                # Verifica se é um erro de limite de requisições
+                if "Limite de requisições excedido" in error_message:
+                    query.status = "rate_limited"
+                    logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
+                else:
+                    query.status = "error"
+                
+                query.error_message = f"Erro global: {error_message}"
                 query.updated_at = datetime.utcnow()
                 self.db.commit()
         finally:

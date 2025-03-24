@@ -222,10 +222,11 @@ async def get_queue_status(
     total_processing = db.query(CNPJQuery).filter(CNPJQuery.status == "processing").count()
     total_completed = db.query(CNPJQuery).filter(CNPJQuery.status == "completed").count()
     total_error = db.query(CNPJQuery).filter(CNPJQuery.status == "error").count()
+    total_rate_limited = db.query(CNPJQuery).filter(CNPJQuery.status == "rate_limited").count()
     
-    # Obtém os 10 CNPJs mais recentes em processamento ou na fila
+    # Obtém os 10 CNPJs mais recentes em processamento, na fila ou com limite de requisições
     recent_pending = db.query(CNPJQuery).filter(
-        CNPJQuery.status.in_(["queued", "processing"])
+        CNPJQuery.status.in_(["queued", "processing", "rate_limited"])
     ).order_by(CNPJQuery.created_at.desc()).limit(10).all()
     
     pending_cnpjs = [
@@ -244,7 +245,8 @@ async def get_queue_status(
             "processing": total_processing,
             "completed": total_completed,
             "error": total_error,
-            "total": total_queued + total_processing + total_completed + total_error
+            "rate_limited": total_rate_limited,
+            "total": total_queued + total_processing + total_completed + total_error + total_rate_limited
         },
         "recent_pending": pending_cnpjs
     }
@@ -321,6 +323,98 @@ async def reset_error_cnpjs(
     
     return {"message": f"{count} CNPJs com erro resetados para a fila", "count": count}
 
+@admin_router.post("/queue/reset-rate-limited")
+async def reset_rate_limited_cnpjs(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    api_client: ReceitaWSClient = Depends(get_api_client)
+):
+    """
+    Reseta CNPJs com status de limite de requisições excedido para 'queued' e reinicia o processamento
+    """
+    logger.info("Resetando CNPJs com status de limite de requisições para a fila")
+    
+    # Encontra todos os CNPJs com status 'rate_limited'
+    rate_limited_queries = db.query(CNPJQuery).filter(CNPJQuery.status == "rate_limited").all()
+    
+    if not rate_limited_queries:
+        logger.info("Nenhum CNPJ com limite de requisições excedido encontrado")
+        return {"message": "Nenhum CNPJ com limite de requisições excedido encontrado", "count": 0}
+    
+    # Atualiza o status para 'queued'
+    count = 0
+    for query in rate_limited_queries:
+        query.status = "queued"
+        query.error_message = None
+        query.updated_at = datetime.utcnow()
+        count += 1
+    
+    db.commit()
+    logger.info(f"{count} CNPJs com limite de requisições resetados para 'queued'")
+    
+    # Obtém a instância singleton do gerenciador de fila
+    queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
+    
+    # Função para carregar CNPJs pendentes em background
+    async def load_and_process():
+        try:
+            await queue_manager.load_pending_cnpjs()
+            logger.info(f"Processamento reiniciado após resetar {count} CNPJs com limite de requisições")
+        except Exception as e:
+            logger.error(f"Erro ao reiniciar processamento: {str(e)}")
+    
+    # Agenda o processamento em background usando BackgroundTasks
+    background_tasks.add_task(load_and_process)
+    
+    return {"message": f"{count} CNPJs com limite de requisições resetados para a fila", "count": count}
+
+@admin_router.post("/queue/reset-all-pending")
+async def reset_all_pending_cnpjs(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    api_client: ReceitaWSClient = Depends(get_api_client)
+):
+    """
+    Reseta todos os CNPJs pendentes (erro e limite de requisições) para 'queued' e reinicia o processamento
+    """
+    logger.info("Resetando todos os CNPJs pendentes para a fila")
+    
+    # Encontra todos os CNPJs com status 'error' ou 'rate_limited'
+    pending_queries = db.query(CNPJQuery).filter(
+        CNPJQuery.status.in_(["error", "rate_limited"])
+    ).all()
+    
+    if not pending_queries:
+        logger.info("Nenhum CNPJ pendente encontrado")
+        return {"message": "Nenhum CNPJ pendente encontrado", "count": 0}
+    
+    # Atualiza o status para 'queued'
+    count = 0
+    for query in pending_queries:
+        query.status = "queued"
+        query.error_message = None
+        query.updated_at = datetime.utcnow()
+        count += 1
+    
+    db.commit()
+    logger.info(f"{count} CNPJs pendentes resetados para 'queued'")
+    
+    # Obtém a instância singleton do gerenciador de fila
+    queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
+    
+    # Função para carregar CNPJs pendentes em background
+    async def load_and_process():
+        try:
+            await queue_manager.load_pending_cnpjs()
+            logger.info(f"Processamento reiniciado após resetar {count} CNPJs pendentes")
+        except Exception as e:
+            logger.error(f"Erro ao reiniciar processamento: {str(e)}")
+    
+    # Agenda o processamento em background usando BackgroundTasks
+    background_tasks.add_task(load_and_process)
+    
+    return {"message": f"{count} CNPJs pendentes resetados para a fila", "count": count}
+
 def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     """
     Obtém status de lote para uma lista de CNPJs
@@ -331,6 +425,7 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     processing = 0
     error = 0
     queued = 0
+    rate_limited = 0
     
     for cnpj in cnpjs:
         query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
@@ -347,6 +442,8 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
                 error += 1
             elif status == "queued":
                 queued += 1
+            elif status == "rate_limited":
+                rate_limited += 1
         else:
             status = "unknown"
             error_message = None
@@ -363,5 +460,6 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
         processing=processing,
         error=error,
         queued=queued,
+        rate_limited=rate_limited,
         results=statuses
     )

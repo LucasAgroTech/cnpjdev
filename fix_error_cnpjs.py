@@ -28,6 +28,8 @@ def parse_args():
     parser.add_argument('--api-url', help='URL base da API para reiniciar a fila (ex: https://seu-app.herokuapp.com)')
     parser.add_argument('--no-restart', action='store_true', help='Não reiniciar a fila após resetar os CNPJs')
     parser.add_argument('--verbose', '-v', action='store_true', help='Mostrar informações detalhadas')
+    parser.add_argument('--only-errors', action='store_true', help='Resetar apenas CNPJs com status "error", ignorando os com status "rate_limited"')
+    parser.add_argument('--only-rate-limited', action='store_true', help='Resetar apenas CNPJs com status "rate_limited", ignorando os com status "error"')
     
     return parser.parse_args()
 
@@ -69,26 +71,78 @@ def connect_to_database(db_url):
         print(f"ERRO: Não foi possível conectar ao banco de dados: {str(e)}")
         sys.exit(1)
 
-def reset_error_cnpjs(conn, verbose=False):
+def reset_error_cnpjs(conn, verbose=False, include_rate_limited=True):
     """Reset CNPJs with error status to queued"""
     try:
         with conn.cursor(cursor_factory=DictCursor) as cur:
-            # Primeiro, conta quantos CNPJs estão com erro
-            cur.execute("SELECT COUNT(*) FROM cnpj_queries WHERE status = 'error'")
+            # Define a condição de status com base nos parâmetros
+            status_condition = "status = 'error'"
+            if include_rate_limited:
+                status_condition = "(status = 'error' OR status = 'rate_limited')"
+            
+            # Primeiro, conta quantos CNPJs estão com erro ou rate_limited
+            cur.execute(f"SELECT COUNT(*) FROM cnpj_queries WHERE {status_condition}")
             error_count = cur.fetchone()[0]
             
             if error_count == 0:
-                print("Nenhum CNPJ com erro encontrado.")
+                print("Nenhum CNPJ com erro ou limite de requisições encontrado.")
                 return 0
             
             # Obtém os CNPJs com erro para exibir detalhes se verbose=True
             if verbose:
-                cur.execute("SELECT cnpj, error_message, updated_at FROM cnpj_queries WHERE status = 'error'")
+                cur.execute(f"SELECT cnpj, status, error_message, updated_at FROM cnpj_queries WHERE {status_condition}")
                 error_cnpjs = cur.fetchall()
-                print(f"\nDetalhes dos {error_count} CNPJs com erro:")
+                print(f"\nDetalhes dos {error_count} CNPJs com erro ou limite de requisições:")
                 for i, row in enumerate(error_cnpjs, 1):
+                    status_text = "Erro" if row['status'] == 'error' else "Limite de requisições excedido"
                     print(f"{i}. CNPJ: {row['cnpj']}")
-                    print(f"   Erro: {row['error_message']}")
+                    print(f"   Status: {status_text}")
+                    print(f"   Mensagem: {row['error_message']}")
+                    print(f"   Última atualização: {row['updated_at']}")
+                    print()
+            
+            # Atualiza o status para "queued"
+            now = datetime.utcnow()
+            cur.execute(f"""
+                UPDATE cnpj_queries 
+                SET status = 'queued', 
+                    error_message = NULL, 
+                    updated_at = %s 
+                WHERE {status_condition}
+            """, (now,))
+            
+            # Confirma as alterações
+            conn.commit()
+            
+            status_text = "erro ou limite de requisições" if include_rate_limited else "erro"
+            print(f"Sucesso! {error_count} CNPJs com {status_text} foram resetados para 'queued'.")
+            return error_count
+            
+    except Exception as e:
+        conn.rollback()
+        print(f"ERRO: Falha ao resetar CNPJs: {str(e)}")
+        return 0
+
+def reset_rate_limited_cnpjs(conn, verbose=False):
+    """Reset CNPJs with rate_limited status to queued"""
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            # Conta quantos CNPJs estão com status rate_limited
+            cur.execute("SELECT COUNT(*) FROM cnpj_queries WHERE status = 'rate_limited'")
+            rate_limited_count = cur.fetchone()[0]
+            
+            if rate_limited_count == 0:
+                print("Nenhum CNPJ com limite de requisições excedido encontrado.")
+                return 0
+            
+            # Obtém os CNPJs com rate_limited para exibir detalhes se verbose=True
+            if verbose:
+                cur.execute("SELECT cnpj, error_message, updated_at FROM cnpj_queries WHERE status = 'rate_limited'")
+                rate_limited_cnpjs = cur.fetchall()
+                print(f"\nDetalhes dos {rate_limited_count} CNPJs com limite de requisições excedido:")
+                for i, row in enumerate(rate_limited_cnpjs, 1):
+                    print(f"{i}. CNPJ: {row['cnpj']}")
+                    print(f"   Mensagem: {row['error_message']}")
                     print(f"   Última atualização: {row['updated_at']}")
                     print()
             
@@ -99,18 +153,18 @@ def reset_error_cnpjs(conn, verbose=False):
                 SET status = 'queued', 
                     error_message = NULL, 
                     updated_at = %s 
-                WHERE status = 'error'
+                WHERE status = 'rate_limited'
             """, (now,))
             
             # Confirma as alterações
             conn.commit()
             
-            print(f"Sucesso! {error_count} CNPJs com erro foram resetados para 'queued'.")
-            return error_count
+            print(f"Sucesso! {rate_limited_count} CNPJs com limite de requisições excedido foram resetados para 'queued'.")
+            return rate_limited_count
             
     except Exception as e:
         conn.rollback()
-        print(f"ERRO: Falha ao resetar CNPJs: {str(e)}")
+        print(f"ERRO: Falha ao resetar CNPJs com limite de requisições: {str(e)}")
         return 0
 
 def restart_queue(api_url):
@@ -140,6 +194,11 @@ def main():
     """Main function"""
     args = parse_args()
     
+    # Verifica se as opções são mutuamente exclusivas
+    if args.only_errors and args.only_rate_limited:
+        print("ERRO: As opções --only-errors e --only-rate-limited não podem ser usadas juntas.")
+        sys.exit(1)
+    
     # Obtém a URL do banco de dados
     db_url = get_database_url(args)
     
@@ -148,9 +207,27 @@ def main():
     conn = connect_to_database(db_url)
     
     try:
-        # Reseta CNPJs com erro
-        print("Resetando CNPJs com erro para 'queued'...")
-        reset_count = reset_error_cnpjs(conn, args.verbose)
+        # Determina quais CNPJs resetar com base nas opções
+        include_rate_limited = not args.only_errors
+        include_errors = not args.only_rate_limited
+        
+        # Constrói a mensagem de status
+        if args.only_errors:
+            status_msg = "com erro"
+        elif args.only_rate_limited:
+            status_msg = "com limite de requisições excedido"
+        else:
+            status_msg = "com erro ou limite de requisições excedido"
+        
+        print(f"Resetando CNPJs {status_msg} para 'queued'...")
+        
+        # Chama a função com os parâmetros apropriados
+        if args.only_rate_limited:
+            # Caso especial: apenas rate_limited
+            reset_count = reset_rate_limited_cnpjs(conn, args.verbose)
+        else:
+            # Caso normal: erro ou ambos
+            reset_count = reset_error_cnpjs(conn, args.verbose, include_rate_limited)
         
         # Reinicia a fila se necessário
         if reset_count > 0 and not args.no_restart:

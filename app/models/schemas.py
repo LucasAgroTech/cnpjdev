@@ -66,4 +66,5 @@ class CNPJBatchStatus(BaseModel):
     processing: int
     error: int
     queued: int
+    rate_limited: int = 0
     results: List[CNPJStatus]
