@@ -12,3 +12,4 @@ xlsxwriter
 jinja2
 pydantic
 asyncio
+requests

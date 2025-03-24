@@ -8,8 +8,8 @@ import time
 from app.models.database import CNPJQuery, CNPJData
 from app.services.receitaws import ReceitaWSClient
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
-from app.config import MAX_RETRY_ATTEMPTS
+from sqlalchemy import or_, and_, func
+from app.config import MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,22 @@ class CNPJQueue:
             self._queue = asyncio.Queue()
         return self._queue
     
+    async def get_processing_count(self) -> int:
+        """
+        Obtém o número de CNPJs atualmente em processamento
+        
+        Returns:
+            Número de CNPJs em processamento
+        """
+        try:
+            count = self.db.query(func.count(CNPJQuery.id)).filter(
+                CNPJQuery.status == "processing"
+            ).scalar()
+            return count or 0
+        except Exception as e:
+            logger.error(f"Erro ao obter contagem de CNPJs em processamento: {str(e)}")
+            return 0
+    
     async def cleanup_stuck_processing(self) -> int:
         """
         Limpa CNPJs que estão presos no status "processing" por muito tempo
@@ -80,15 +96,15 @@ class CNPJQueue:
             Número de CNPJs redefinidos
         """
         try:
-            # Verifica se é hora de fazer a limpeza (a cada 5 minutos)
+            # Verifica se é hora de fazer a limpeza (a cada 1 minuto)
             now = datetime.utcnow()
-            if (now - self._last_cleanup).total_seconds() < 300:  # 5 minutos
+            if (now - self._last_cleanup).total_seconds() < 60:  # 1 minuto
                 return 0
                 
             self._last_cleanup = now
             
-            # Encontra CNPJs que estão em "processing" por mais de 10 minutos
-            timeout_threshold = now - timedelta(minutes=10)
+            # Encontra CNPJs que estão em "processing" por mais de 5 minutos
+            timeout_threshold = now - timedelta(minutes=5)
             
             stuck_queries = self.db.query(CNPJQuery).filter(
                 and_(
@@ -206,6 +222,9 @@ class CNPJQueue:
         
         Implementa mecanismo de persistência para garantir que o processamento
         continue mesmo após reinicialização do servidor
+        
+        Limita o número de CNPJs em processamento simultâneo para respeitar
+        o limite de requisições por minuto da API
         """
         self.processing = True
         
@@ -216,7 +235,37 @@ class CNPJQueue:
             # Contador para pausar periodicamente e permitir que outras tarefas sejam executadas
             processed_count = 0
             
+            # Calcula o intervalo mínimo entre requisições para respeitar o limite de requisições por minuto
+            # Adiciona 1 segundo extra por segurança
+            min_interval_seconds = (60.0 / REQUESTS_PER_MINUTE) + 1
+            last_process_time = 0
+            
             while not queue.empty():
+                # Limpa CNPJs presos em processamento
+                await self.cleanup_stuck_processing()
+                
+                # Verifica quantos CNPJs já estão em processamento
+                processing_count = await self.get_processing_count()
+                
+                # Limita o número de CNPJs em processamento simultâneo
+                # Mantém no máximo REQUESTS_PER_MINUTE + 2 CNPJs em processamento
+                # para garantir que sempre haja CNPJs prontos para serem processados
+                max_processing = REQUESTS_PER_MINUTE + 2
+                
+                if processing_count >= max_processing:
+                    logger.debug(f"Já existem {processing_count} CNPJs em processamento. Aguardando...")
+                    await asyncio.sleep(min_interval_seconds)
+                    continue
+                
+                # Respeita o intervalo mínimo entre requisições
+                current_time = time.time()
+                time_since_last_process = current_time - last_process_time
+                
+                if time_since_last_process < min_interval_seconds:
+                    wait_time = min_interval_seconds - time_since_last_process
+                    logger.debug(f"Aguardando {wait_time:.2f}s para respeitar o limite de requisições")
+                    await asyncio.sleep(wait_time)
+                
                 # A cada 5 CNPJs processados, pausa brevemente para permitir que outras tarefas sejam executadas
                 if processed_count >= 5:
                     logger.debug("Pausando brevemente o processamento da fila para permitir outras tarefas")
@@ -228,12 +277,10 @@ class CNPJQueue:
                     # Obtém o próximo CNPJ com timeout
                     cnpj = await asyncio.wait_for(queue.get(), timeout=5.0)
                     processed_count += 1
+                    last_process_time = time.time()
                     
                     # Processa o CNPJ em uma tarefa separada com timeout global
-                    await asyncio.wait_for(
-                        self._process_single_cnpj(cnpj),
-                        timeout=30.0  # Timeout global para processamento de um CNPJ
-                    )
+                    asyncio.create_task(self._process_single_cnpj(cnpj))
                     
                 except asyncio.TimeoutError:
                     logger.error("Timeout ao processar CNPJ da fila")
@@ -241,9 +288,6 @@ class CNPJQueue:
                 except Exception as e:
                     logger.error(f"Erro ao obter CNPJ da fila: {str(e)}")
                     continue  # Continua para o próximo CNPJ
-                
-                # Aguarda um pouco para evitar sobrecarga
-                await asyncio.sleep(0.1)
         
         except Exception as e:
             logger.error(f"Erro no processamento da fila: {str(e)}")
@@ -301,129 +345,147 @@ class CNPJQueue:
             query.status = "processing"
             query.updated_at = datetime.utcnow()
             self.db.commit()
+        else:
+            # Se não encontrou a consulta, pode ter sido um erro
+            logger.warning(f"CNPJ {cnpj} não encontrado na base de dados para processamento")
+            # Marca a tarefa como concluída e retorna
+            queue = await self.queue
+            queue.task_done()
+            return
         
         # Tenta processar o CNPJ com retry em caso de falha
         start_time = time.time()
         
-        while retry_count < max_retries and not success:
-            # Verifica se o tempo total de processamento está próximo do limite do Heroku (50s)
-            elapsed_time = time.time() - start_time
-            if elapsed_time > 45:  # 45 segundos para dar margem de segurança
-                logger.warning(f"Abortando processamento do CNPJ {cnpj} após {elapsed_time:.1f}s para evitar timeout")
-                
-                # Marca como erro por timeout
-                if query:
-                    query.status = "error"
-                    query.error_message = "Processamento abortado para evitar timeout do servidor"
-                    query.updated_at = datetime.utcnow()
-                    self.db.commit()
-                
-                return
-            
-            try:
-                # Se não for a primeira tentativa, aguarda um pouco mais
-                if retry_count > 0:
-                    wait_time = min(2 ** retry_count, 8)  # Backoff exponencial com limite máximo de 8s
-                    logger.info(f"Tentativa {retry_count+1} para CNPJ {cnpj}, aguardando {wait_time}s")
-                    await asyncio.sleep(wait_time)
-                
-                # Consulta a API com timeout
-                logger.info(f"Processando CNPJ: {cnpj}")
-                result = await self.api_client.query_cnpj(cnpj, include_simples=True)
-                
-                # Extrai dados relevantes
-                company_name = result.get("company", {}).get("name", "")
-                trade_name = result.get("alias", "")
-                status = result.get("company", {}).get("status", {}).get("text", "")
-                
-                # Extrai dados de endereço
-                address_data = result.get("address", {})
-                address = f"{address_data.get('street', '')} {address_data.get('number', '')}"
-                if address_data.get('details'):
-                    address += f", {address_data.get('details')}"
-                
-                city = address_data.get("city", "")
-                state = address_data.get("state", "")
-                zip_code = address_data.get("zip", "")
-                
-                # Extrai contatos
-                contacts = result.get("contacts", [])
-                email = next((c.get("email") for c in contacts if c.get("email")), "")
-                phone = next((c.get("phone") for c in contacts if c.get("phone")), "")
-                
-                # Extrai informações do Simples Nacional
-                simples_data = result.get("company", {}).get("simples", {})
-                simples_nacional = simples_data.get("optant", False)
-                simples_nacional_date = None
-                if simples_data.get("since"):
-                    try:
-                        simples_nacional_date = datetime.strptime(simples_data.get("since"), "%Y-%m-%d")
-                    except:
-                        pass
-                
-                # Salva no banco de dados
-                cnpj_data = self.db.query(CNPJData).filter(CNPJData.cnpj == cnpj).first()
-                
-                if not cnpj_data:
-                    cnpj_data = CNPJData(
-                        cnpj=cnpj,
-                        raw_data=result,
-                        company_name=company_name,
-                        trade_name=trade_name,
-                        status=status,
-                        address=address,
-                        city=city,
-                        state=state,
-                        zip_code=zip_code,
-                        email=email,
-                        phone=phone,
-                        simples_nacional=simples_nacional,
-                        simples_nacional_date=simples_nacional_date
-                    )
-                    self.db.add(cnpj_data)
-                else:
-                    cnpj_data.raw_data = result
-                    cnpj_data.company_name = company_name
-                    cnpj_data.trade_name = trade_name
-                    cnpj_data.status = status
-                    cnpj_data.address = address
-                    cnpj_data.city = city
-                    cnpj_data.state = state
-                    cnpj_data.zip_code = zip_code
-                    cnpj_data.email = email
-                    cnpj_data.phone = phone
-                    cnpj_data.simples_nacional = simples_nacional
-                    cnpj_data.simples_nacional_date = simples_nacional_date
-                    cnpj_data.updated_at = datetime.utcnow()
-                
-                # Atualiza o status da consulta
-                if query:
-                    query.status = "completed"
-                    query.error_message = None
-                    query.updated_at = datetime.utcnow()
-                
-                self.db.commit()
-                logger.info(f"CNPJ {cnpj} processado com sucesso")
-                
-                # Marca como sucesso para sair do loop de retry
-                success = True
-                
-            except Exception as e:
-                retry_count += 1
-                logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
-                
-                # Se for a última tentativa, marca como erro
-                if retry_count >= max_retries:
-                    logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {str(e)}")
-                    logger.debug(traceback.format_exc())
+        try:
+            while retry_count < max_retries and not success:
+                # Verifica se o tempo total de processamento está próximo do limite do Heroku (50s)
+                elapsed_time = time.time() - start_time
+                if elapsed_time > 45:  # 45 segundos para dar margem de segurança
+                    logger.warning(f"Abortando processamento do CNPJ {cnpj} após {elapsed_time:.1f}s para evitar timeout")
                     
-                    # Atualiza o status da consulta com erro
+                    # Marca como erro por timeout
                     if query:
                         query.status = "error"
-                        query.error_message = str(e)
+                        query.error_message = "Processamento abortado para evitar timeout do servidor"
                         query.updated_at = datetime.utcnow()
                         self.db.commit()
-        
-        # Marca a tarefa como concluída
-        queue = await self.queue
-        queue.task_done()
+                    
+                    break  # Sai do loop de retry
+                
+                try:
+                    # Se não for a primeira tentativa, aguarda um pouco mais
+                    if retry_count > 0:
+                        wait_time = min(2 ** retry_count, 8)  # Backoff exponencial com limite máximo de 8s
+                        logger.info(f"Tentativa {retry_count+1} para CNPJ {cnpj}, aguardando {wait_time}s")
+                        await asyncio.sleep(wait_time)
+                    
+                    # Consulta a API com timeout
+                    logger.info(f"Processando CNPJ: {cnpj}")
+                    result = await self.api_client.query_cnpj(cnpj, include_simples=True)
+                    
+                    # Extrai dados relevantes
+                    company_name = result.get("company", {}).get("name", "")
+                    trade_name = result.get("alias", "")
+                    status = result.get("company", {}).get("status", {}).get("text", "")
+                    
+                    # Extrai dados de endereço
+                    address_data = result.get("address", {})
+                    address = f"{address_data.get('street', '')} {address_data.get('number', '')}"
+                    if address_data.get('details'):
+                        address += f", {address_data.get('details')}"
+                    
+                    city = address_data.get("city", "")
+                    state = address_data.get("state", "")
+                    zip_code = address_data.get("zip", "")
+                    
+                    # Extrai contatos
+                    contacts = result.get("contacts", [])
+                    email = next((c.get("email") for c in contacts if c.get("email")), "")
+                    phone = next((c.get("phone") for c in contacts if c.get("phone")), "")
+                    
+                    # Extrai informações do Simples Nacional
+                    simples_data = result.get("company", {}).get("simples", {})
+                    simples_nacional = simples_data.get("optant", False)
+                    simples_nacional_date = None
+                    if simples_data.get("since"):
+                        try:
+                            simples_nacional_date = datetime.strptime(simples_data.get("since"), "%Y-%m-%d")
+                        except:
+                            pass
+                    
+                    # Salva no banco de dados
+                    cnpj_data = self.db.query(CNPJData).filter(CNPJData.cnpj == cnpj).first()
+                    
+                    if not cnpj_data:
+                        cnpj_data = CNPJData(
+                            cnpj=cnpj,
+                            raw_data=result,
+                            company_name=company_name,
+                            trade_name=trade_name,
+                            status=status,
+                            address=address,
+                            city=city,
+                            state=state,
+                            zip_code=zip_code,
+                            email=email,
+                            phone=phone,
+                            simples_nacional=simples_nacional,
+                            simples_nacional_date=simples_nacional_date
+                        )
+                        self.db.add(cnpj_data)
+                    else:
+                        cnpj_data.raw_data = result
+                        cnpj_data.company_name = company_name
+                        cnpj_data.trade_name = trade_name
+                        cnpj_data.status = status
+                        cnpj_data.address = address
+                        cnpj_data.city = city
+                        cnpj_data.state = state
+                        cnpj_data.zip_code = zip_code
+                        cnpj_data.email = email
+                        cnpj_data.phone = phone
+                        cnpj_data.simples_nacional = simples_nacional
+                        cnpj_data.simples_nacional_date = simples_nacional_date
+                        cnpj_data.updated_at = datetime.utcnow()
+                    
+                    # Atualiza o status da consulta
+                    if query:
+                        query.status = "completed"
+                        query.error_message = None
+                        query.updated_at = datetime.utcnow()
+                    
+                    self.db.commit()
+                    logger.info(f"CNPJ {cnpj} processado com sucesso")
+                    
+                    # Marca como sucesso para sair do loop de retry
+                    success = True
+                    
+                except Exception as e:
+                    retry_count += 1
+                    logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
+                    
+                    # Se for a última tentativa, marca como erro
+                    if retry_count >= max_retries:
+                        logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {str(e)}")
+                        logger.debug(traceback.format_exc())
+                        
+                        # Atualiza o status da consulta com erro
+                        if query:
+                            query.status = "error"
+                            query.error_message = str(e)
+                            query.updated_at = datetime.utcnow()
+                            self.db.commit()
+        except Exception as e:
+            logger.error(f"Erro global ao processar CNPJ {cnpj}: {str(e)}")
+            logger.debug(traceback.format_exc())
+            
+            # Atualiza o status da consulta com erro
+            if query and query.status == "processing":
+                query.status = "error"
+                query.error_message = f"Erro global: {str(e)}"
+                query.updated_at = datetime.utcnow()
+                self.db.commit()
+        finally:
+            # Marca a tarefa como concluída
+            queue = await self.queue
+            queue.task_done()
