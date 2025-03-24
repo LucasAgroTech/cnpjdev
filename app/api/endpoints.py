@@ -205,8 +205,8 @@ def export_excel(
     )
 
 # Cria um router separado para endpoints de administração
-admin_router = APIRouter(prefix="/admin", tags=["admin"])
-router.include_router(admin_router)
+admin_router = APIRouter(tags=["admin"])
+router.include_router(admin_router, prefix="/admin")
 
 @admin_router.get("/queue/status")
 async def get_queue_status(
