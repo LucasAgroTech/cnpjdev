@@ -994,8 +994,8 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Resetando...';
                         
-                        // Use the full URL path to ensure it's correct
-                        const response = await fetch('/api/admin/queue/reset-errors', {
+                        // Use the full URL path with the correct admin prefix
+                        const response = await fetch('/api/admin/admin/queue/reset-errors', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
