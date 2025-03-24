@@ -14,8 +14,8 @@ from app.services.api_manager import APIManager
 from app.services.queue import CNPJQueue
 from app.utils.file_handler import process_cnpj_file, generate_cnpj_excel
 from app.config import (
-    RECEITAWS_ENABLED, CNPJWS_ENABLED, 
-    RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE
+    RECEITAWS_ENABLED, CNPJWS_ENABLED, CNPJA_OPEN_ENABLED,
+    RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE
 )
 
 logger = logging.getLogger(__name__)
@@ -27,8 +27,10 @@ def get_api_client():
     return APIManager(
         receitaws_enabled=RECEITAWS_ENABLED,
         cnpjws_enabled=CNPJWS_ENABLED,
+        cnpja_open_enabled=CNPJA_OPEN_ENABLED,
         receitaws_requests_per_minute=RECEITAWS_REQUESTS_PER_MINUTE,
-        cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE
+        cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE,
+        cnpja_open_requests_per_minute=CNPJA_OPEN_REQUESTS_PER_MINUTE
     )
 
 # Obtém instância do gerenciador de fila

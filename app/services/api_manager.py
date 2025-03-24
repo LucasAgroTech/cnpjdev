@@ -5,6 +5,7 @@ import asyncio
 
 from app.services.receitaws import ReceitaWSClient
 from app.services.cnpjws import CNPJWSClient
+from app.services.cnpja_open import CNPJaOpenClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,10 @@ class APIManager:
         self, 
         receitaws_enabled: bool = True,
         cnpjws_enabled: bool = True,
+        cnpja_open_enabled: bool = True,
         receitaws_requests_per_minute: int = 3,
-        cnpjws_requests_per_minute: int = 3
+        cnpjws_requests_per_minute: int = 3,
+        cnpja_open_requests_per_minute: int = 5
     ):
         """
         Inicializa o gerenciador de APIs
@@ -29,8 +32,10 @@ class APIManager:
         Args:
             receitaws_enabled: Se a API ReceitaWS está habilitada
             cnpjws_enabled: Se a API CNPJ.ws está habilitada
+            cnpja_open_enabled: Se a API CNPJa Open está habilitada
             receitaws_requests_per_minute: Máximo de requisições por minuto para ReceitaWS
             cnpjws_requests_per_minute: Máximo de requisições por minuto para CNPJ.ws
+            cnpja_open_requests_per_minute: Máximo de requisições por minuto para CNPJa Open
         """
         self.apis = []
         self.api_names = []
@@ -51,6 +56,14 @@ class APIManager:
             logger.info(f"API CNPJ.ws habilitada com {cnpjws_requests_per_minute} req/min")
         else:
             self.cnpjws_client = None
+            
+        if cnpja_open_enabled:
+            self.cnpja_open_client = CNPJaOpenClient(requests_per_minute=cnpja_open_requests_per_minute)
+            self.apis.append(self.cnpja_open_client)
+            self.api_names.append("CNPJa Open")
+            logger.info(f"API CNPJa Open habilitada com {cnpja_open_requests_per_minute} req/min")
+        else:
+            self.cnpja_open_client = None
             
         if not self.apis:
             raise ValueError("Pelo menos uma API deve estar habilitada")

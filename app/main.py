@@ -11,7 +11,8 @@ from app.api.endpoints import router as api_router
 from app.models.database import Base, engine
 from app.config import (
     APP_NAME, APP_DESCRIPTION, APP_VERSION, DEBUG, AUTO_RESTART_QUEUE,
-    RECEITAWS_ENABLED, CNPJWS_ENABLED, RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE
+    RECEITAWS_ENABLED, CNPJWS_ENABLED, CNPJA_OPEN_ENABLED,
+    RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE
 )
 
 # Configuração de logging
@@ -138,8 +139,10 @@ async def delayed_queue_initialization(delay_seconds: float):
         api_client = APIManager(
             receitaws_enabled=RECEITAWS_ENABLED,
             cnpjws_enabled=CNPJWS_ENABLED,
+            cnpja_open_enabled=CNPJA_OPEN_ENABLED,
             receitaws_requests_per_minute=RECEITAWS_REQUESTS_PER_MINUTE,
-            cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE
+            cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE,
+            cnpja_open_requests_per_minute=CNPJA_OPEN_REQUESTS_PER_MINUTE
         )
         
         # Obtém a instância singleton do gerenciador de fila

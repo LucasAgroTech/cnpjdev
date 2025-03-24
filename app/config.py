@@ -8,8 +8,10 @@ load_dotenv()
 # Configuração das APIs
 RECEITAWS_ENABLED: bool = os.environ.get("RECEITAWS_ENABLED", "True").lower() == "true"
 CNPJWS_ENABLED: bool = os.environ.get("CNPJWS_ENABLED", "True").lower() == "true"
+CNPJA_OPEN_ENABLED: bool = os.environ.get("CNPJA_OPEN_ENABLED", "True").lower() == "true"
 RECEITAWS_REQUESTS_PER_MINUTE: int = int(os.environ.get("RECEITAWS_REQUESTS_PER_MINUTE", "3"))
 CNPJWS_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJWS_REQUESTS_PER_MINUTE", "3"))
+CNPJA_OPEN_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJA_OPEN_REQUESTS_PER_MINUTE", "5"))
 
 # Mantém para compatibilidade
 REQUESTS_PER_MINUTE: int = int(os.environ.get("REQUESTS_PER_MINUTE", "3"))
