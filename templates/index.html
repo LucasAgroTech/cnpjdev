@@ -1031,7 +1031,7 @@
                     const tdActions = document.createElement('td');
                     if (result.status === 'completed') {
                         const viewBtn = document.createElement('button');
-                        viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
+                        viewBtn.className = 'btn btn-sm btn-outline-dark view-result-btn';
                         viewBtn.setAttribute('data-cnpj', result.cnpj);
                         viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
                         viewBtn.addEventListener('click', function() {
@@ -1076,15 +1076,15 @@
                     let html = `
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3" style="box-shadow: 0 0 15px var(--primary-glow);">
-                                    <i class="bi bi-building data-icon" style="font-size: 2rem;"></i>
+                                <div class="bg-primary p-3 rounded-circle me-3" style="box-shadow: 0 0 15px var(--primary-glow);">
+                                    <i class="bi bi-building text-dark" style="font-size: 2rem;"></i>
                                 </div>
                                 <div>
-                                    <h5 class="mb-1">${data.company_name || 'Sem nome'}</h5>
-                                    <p class="mb-0 text-muted">ID: <span class="text-primary">${formatCNPJ(data.cnpj)}</span></p>
+                                    <h5 class="mb-1 text-white">${data.company_name || 'Sem nome'}</h5>
+                                    <p class="mb-0 text-white opacity-75">ID: <span class="text-primary">${formatCNPJ(data.cnpj)}</span></p>
                                 </div>
                             </div>
-                            ${data.trade_name ? `<div class="alert alert-light"><strong>Nome Comercial:</strong> ${data.trade_name}</div>` : ''}
+                            ${data.trade_name ? `<div class="alert alert-light"><strong class="text-dark">Nome Comercial:</strong> <span class="text-dark">${data.trade_name}</span></div>` : ''}
                         </div>
                         
                         <div class="row mb-4">
@@ -1092,8 +1092,8 @@
                                 <div class="card h-100">
                                     <div class="card-body">
                                         <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-geo-alt me-2 data-icon"></i>Localização</h6>
-                                        <p class="mb-1">${data.address || 'Não informado'}</p>
-                                        <p class="mb-0">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
+                                        <p class="mb-1 text-white">${data.address || 'Não informado'}</p>
+                                        <p class="mb-0 text-white">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1101,8 +1101,8 @@
                                 <div class="card h-100">
                                     <div class="card-body">
                                         <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-telephone me-2 data-icon"></i>Canais</h6>
-                                        <p class="mb-1"><strong>E-mail:</strong> ${data.email || 'Não informado'}</p>
-                                        <p class="mb-0"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
+                                        <p class="mb-1 text-white"><strong>E-mail:</strong> ${data.email || 'Não informado'}</p>
+                                        <p class="mb-0 text-white"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1112,8 +1112,8 @@
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-bank me-2 data-icon"></i>Simples Nacional</h6>
-                                    <p class="mb-1">${data.simples_nacional ? '<span class="badge bg-success">ATIVO</span>' : '<span class="badge bg-secondary">INATIVO</span>'}</p>
-                                    ${data.simples_nacional_date ? `<p class="mb-0"><strong>Desde:</strong> ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
+                                    <p class="mb-1 text-white">${data.simples_nacional ? '<span class="badge bg-success">ATIVO</span>' : '<span class="badge bg-secondary">INATIVO</span>'}</p>
+                                    ${data.simples_nacional_date ? `<p class="mb-0 text-white"><strong>Desde:</strong> ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
                                 </div>
                             </div>
                         </div>
