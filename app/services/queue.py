@@ -115,9 +115,26 @@ class CNPJQueue:
             
             # Usa uma transação para garantir atomicidade
             count = 0
+            
+            # Verifica se já existe uma transação em andamento
+            in_transaction = False
             try:
-                # Inicia uma transação
-                self.db.begin()
+                # Tenta executar uma consulta simples para verificar se já estamos em uma transação
+                self.db.execute("SELECT 1")
+                # Se chegou aqui, não estamos em uma transação explícita
+                in_transaction = False
+            except Exception as e:
+                if "A transaction is already begun on this Session" in str(e):
+                    logger.debug("Já existe uma transação em andamento, usando a transação existente")
+                    in_transaction = True
+                else:
+                    # Outro tipo de erro, propaga
+                    raise
+            
+            try:
+                # Inicia uma transação apenas se não estiver em uma
+                if not in_transaction:
+                    self.db.begin()
                 
                 # Usa FOR UPDATE para bloquear as linhas durante a atualização
                 stuck_queries = self.db.query(CNPJQuery).filter(
@@ -129,7 +146,8 @@ class CNPJQueue:
                 
                 if not stuck_queries:
                     logger.debug("Nenhum CNPJ preso em processamento encontrado")
-                    self.db.rollback()  # Não há nada para atualizar, faz rollback da transação
+                    if not in_transaction:
+                        self.db.rollback()  # Não há nada para atualizar, faz rollback da transação
                     return 0
                 
                 # Redefine o status para "error" ou mantém "rate_limited"
@@ -145,12 +163,14 @@ class CNPJQueue:
                     query.updated_at = now
                     count += 1
                 
-                # Commit da transação
-                self.db.commit()
-                logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
+                # Commit da transação apenas se iniciamos uma nova
+                if not in_transaction:
+                    self.db.commit()
+                    logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
             except Exception as e:
-                # Em caso de erro, faz rollback da transação
-                self.db.rollback()
+                # Em caso de erro, faz rollback da transação apenas se iniciamos uma nova
+                if not in_transaction:
+                    self.db.rollback()
                 logger.error(f"Erro na transação ao limpar CNPJs presos: {str(e)}")
                 return 0
                 
