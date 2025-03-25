@@ -47,10 +47,17 @@ def fix_incomplete_status(dry_run=False):
         
         # Verifica se as tabelas existem
         logger.info("Verificando tabelas...")
-        inspector = engine.dialect.inspector
-        tables = inspector.get_table_names(schema="public")
-        if "cnpj_queries" not in tables or "cnpj_data" not in tables:
-            logger.error(f"Tabelas necessárias não encontradas. Tabelas existentes: {tables}")
+        from sqlalchemy import text
+        try:
+            # Usa uma consulta SQL direta para obter os nomes das tabelas
+            tables = [t[0] for t in engine.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).fetchall()]
+            logger.info(f"Tabelas encontradas: {tables}")
+            if "cnpj_queries" not in tables or "cnpj_data" not in tables:
+                logger.error(f"Tabelas necessárias não encontradas. Tabelas existentes: {tables}")
+                return
+        except Exception as e:
+            logger.error(f"Erro ao verificar tabelas: {str(e)}")
+            logger.error(traceback.format_exc())
             return
         
         # CNPJs que têm dados

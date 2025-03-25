@@ -120,7 +120,8 @@ class CNPJQueue:
             in_transaction = False
             try:
                 # Tenta executar uma consulta simples para verificar se já estamos em uma transação
-                self.db.execute("SELECT 1")
+                from sqlalchemy import text
+                self.db.execute(text("SELECT 1"))
                 # Se chegou aqui, não estamos em uma transação explícita
                 in_transaction = False
             except Exception as e:
@@ -129,7 +130,13 @@ class CNPJQueue:
                     in_transaction = True
                 else:
                     # Outro tipo de erro, propaga
-                    raise
+                    logger.error(f"Erro ao verificar transação: {str(e)}")
+                    # Tenta fazer rollback para limpar qualquer transação pendente
+                    try:
+                        self.db.rollback()
+                        logger.info("Rollback realizado com sucesso")
+                    except Exception as rollback_error:
+                        logger.error(f"Erro ao fazer rollback: {str(rollback_error)}")
             
             try:
                 # Inicia uma transação apenas se não estiver em uma
