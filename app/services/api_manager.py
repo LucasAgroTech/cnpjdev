@@ -1,7 +1,9 @@
 import logging
 import random
+import time
 from typing import Dict, List, Optional, Any, Tuple
 import asyncio
+from collections import defaultdict
 
 from app.services.receitaws import ReceitaWSClient
 from app.services.cnpjws import CNPJWSClient
@@ -15,6 +17,10 @@ class APIManager:
     
     Gerencia múltiplas APIs para consulta de CNPJ, distribuindo as requisições
     entre elas para maximizar o número de consultas por minuto.
+    
+    Implementa estratégia de distribuição inteligente para garantir que cada API
+    seja utilizada até seu limite máximo, priorizando as APIs com maior capacidade
+    disponível no momento.
     """
     
     def __init__(
@@ -65,6 +71,15 @@ class APIManager:
         else:
             self.cnpja_open_client = None
             
+        # Rastreamento de uso de APIs para distribuição inteligente
+        self.api_usage = {}
+        for api, name in zip(self.apis, self.api_names):
+            self.api_usage[name] = {
+                "limit": api.requests_per_minute,
+                "last_used": 0,
+                "usage_count": 0
+            }
+            
         if not self.apis:
             raise ValueError("Pelo menos uma API deve estar habilitada")
             
@@ -89,9 +104,8 @@ class APIManager:
         if len(cnpj_clean) != 14:
             raise ValueError(f"CNPJ inválido: {cnpj}. Deve conter 14 dígitos numéricos.")
         
-        # Embaralha a ordem das APIs para distribuir as requisições
-        apis_to_try = list(zip(self.apis, self.api_names))
-        random.shuffle(apis_to_try)
+        # Ordena as APIs por capacidade disponível (mais disponível primeiro)
+        apis_to_try = self._get_apis_by_availability()
         
         last_error = None
         
@@ -100,6 +114,12 @@ class APIManager:
             try:
                 logger.info(f"Tentando consultar CNPJ {cnpj_clean} usando API {api_name}")
                 result = await api.query_cnpj(cnpj_clean, include_simples)
+                
+                # Atualiza o rastreamento de uso da API
+                now = time.time()
+                self.api_usage[api_name]["last_used"] = now
+                self.api_usage[api_name]["usage_count"] += 1
+                
                 logger.info(f"CNPJ {cnpj_clean} consultado com sucesso usando API {api_name}")
                 return result, api_name
             except Exception as e:
@@ -115,3 +135,38 @@ class APIManager:
             
         logger.error(error_message)
         raise Exception(error_message)
+        
+    def _get_apis_by_availability(self) -> List[Tuple[Any, str]]:
+        """
+        Ordena as APIs por disponibilidade atual, priorizando as que têm mais
+        capacidade disponível no momento.
+        
+        Returns:
+            Lista de tuplas (api, api_name) ordenada por disponibilidade
+        """
+        now = time.time()
+        apis_with_scores = []
+        
+        for api, name in zip(self.apis, self.api_names):
+            # Calcula quantas requisições foram feitas no último minuto
+            usage_info = self.api_usage[name]
+            limit = usage_info["limit"]
+            last_used = usage_info["last_used"]
+            
+            # Se a API não foi usada recentemente, ela tem prioridade máxima
+            if last_used == 0 or now - last_used > 60:
+                score = limit  # Pontuação máxima
+            else:
+                # Calcula a capacidade disponível com base no tempo desde o último uso
+                # e no número de requisições já feitas
+                time_factor = min(1.0, (now - last_used) / 60.0)
+                available_capacity = limit * time_factor
+                score = available_capacity
+            
+            apis_with_scores.append((api, name, score))
+        
+        # Ordena por pontuação (maior primeiro)
+        apis_with_scores.sort(key=lambda x: x[2], reverse=True)
+        
+        # Retorna apenas a API e o nome, sem a pontuação
+        return [(api, name) for api, name, _ in apis_with_scores]

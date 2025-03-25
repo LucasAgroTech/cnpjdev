@@ -9,9 +9,15 @@ from app.models.database import CNPJQuery, CNPJData
 from app.services.api_manager import APIManager
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
-from app.config import MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE
+from app.config import MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE, RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE
 
 logger = logging.getLogger(__name__)
+
+# Constante para o intervalo exato entre requisições para atingir 11 por minuto
+EXACT_INTERVAL_SECONDS = 60.0 / REQUESTS_PER_MINUTE
+
+# Intervalo para verificar se a fila tem CNPJs suficientes (a cada 30 segundos)
+QUEUE_CHECK_INTERVAL = 30
 
 # Singleton para o gerenciador de fila
 _queue_instance = None
@@ -280,8 +286,14 @@ class CNPJQueue:
         
         Limita o número de CNPJs em processamento simultâneo para respeitar
         o limite de requisições por minuto da API
+        
+        Garante que sempre haja CNPJs suficientes na fila para manter o processamento
+        de exatamente REQUESTS_PER_MINUTE CNPJs por minuto
         """
         self.processing = True
+        
+        # Último momento em que verificamos se a fila tem CNPJs suficientes
+        last_queue_check = time.time()
         
         try:
             # Obtém a fila
@@ -290,12 +302,37 @@ class CNPJQueue:
             # Contador para pausar periodicamente e permitir que outras tarefas sejam executadas
             processed_count = 0
             
-            # Calcula o intervalo mínimo entre requisições para respeitar o limite de requisições por minuto
-            # Adiciona 1 segundo extra por segurança
-            min_interval_seconds = (60.0 / REQUESTS_PER_MINUTE) + 1
+            # Calcula o intervalo exato entre requisições para atingir exatamente o limite de requisições por minuto
+            # Não adiciona tempo extra para maximizar o throughput
+            min_interval_seconds = EXACT_INTERVAL_SECONDS
             last_process_time = 0
             
-            while not queue.empty():
+            while True:
+                # Verifica se a fila está vazia
+                if queue.empty():
+                    logger.info("Fila vazia. Verificando se há CNPJs pendentes no banco de dados...")
+                    loaded_count = await self.load_pending_cnpjs()
+                    if loaded_count == 0:
+                        logger.info("Nenhum CNPJ pendente encontrado. Finalizando processamento.")
+                        break
+                
+                # Verifica periodicamente se a fila tem CNPJs suficientes
+                current_time = time.time()
+                if current_time - last_queue_check > QUEUE_CHECK_INTERVAL:
+                    last_queue_check = current_time
+                    
+                    # Verifica quantos CNPJs estão na fila e em processamento
+                    queue_size = queue.qsize()
+                    processing_count = await self.get_processing_count()
+                    total_cnpjs = queue_size + processing_count
+                    
+                    logger.info(f"Status da fila: {queue_size} na fila, {processing_count} em processamento, {total_cnpjs} total")
+                    
+                    # Se o total for menor que o dobro do limite por minuto, carrega mais CNPJs pendentes
+                    if total_cnpjs < REQUESTS_PER_MINUTE * 2:
+                        logger.info(f"Fila com poucos CNPJs ({total_cnpjs}). Carregando mais CNPJs pendentes...")
+                        await self.load_pending_cnpjs()
+                
                 # Limpa CNPJs presos em processamento
                 await self.cleanup_stuck_processing()
                 
@@ -303,9 +340,9 @@ class CNPJQueue:
                 processing_count = await self.get_processing_count()
                 
                 # Limita o número de CNPJs em processamento simultâneo
-                # Mantém no máximo REQUESTS_PER_MINUTE + 2 CNPJs em processamento
-                # para garantir que sempre haja CNPJs prontos para serem processados
-                max_processing = REQUESTS_PER_MINUTE + 2
+                # Mantém exatamente REQUESTS_PER_MINUTE CNPJs em processamento
+                # para garantir que estamos processando na taxa máxima permitida
+                max_processing = REQUESTS_PER_MINUTE
                 
                 if processing_count >= max_processing:
                     logger.debug(f"Já existem {processing_count} CNPJs em processamento. Aguardando...")
@@ -318,7 +355,7 @@ class CNPJQueue:
                 
                 if time_since_last_process < min_interval_seconds:
                     wait_time = min_interval_seconds - time_since_last_process
-                    logger.debug(f"Aguardando {wait_time:.2f}s para respeitar o limite de requisições")
+                    logger.debug(f"Aguardando {wait_time:.2f}s para manter exatamente {REQUESTS_PER_MINUTE} req/min")
                     await asyncio.sleep(wait_time)
                 
                 # A cada 5 CNPJs processados, pausa brevemente para permitir que outras tarefas sejam executadas
