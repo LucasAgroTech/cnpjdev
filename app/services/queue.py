@@ -492,7 +492,7 @@ class CNPJQueue:
                             simples_nacional_date=simples_nacional_date
                         )
                         self.db.add(cnpj_data)
-                        logger.info(f"[DIAGNÓSTICO] Novo registro CNPJData criado para CNPJ {cnpj}")
+                        # Removido log de diagnóstico para economizar memória
                     else:
                         cnpj_data.raw_data = result
                         cnpj_data.company_name = company_name
@@ -507,31 +507,27 @@ class CNPJQueue:
                         cnpj_data.simples_nacional = simples_nacional
                         cnpj_data.simples_nacional_date = simples_nacional_date
                         cnpj_data.updated_at = datetime.utcnow()
-                        logger.info(f"[DIAGNÓSTICO] Registro CNPJData existente atualizado para CNPJ {cnpj}")
+                        # Removido log de diagnóstico para economizar memória
                     
                     # Atualiza o status da consulta
                     if query:
-                        logger.info(f"[DIAGNÓSTICO] Atualizando status do CNPJ {cnpj}. Status atual: {query.status}, ID da sessão: {id(self.db)}")
+                        # Removidos logs de diagnóstico para economizar memória
                         query.status = "completed"
                         query.error_message = None
                         query.updated_at = datetime.utcnow()
-                        logger.info(f"[DIAGNÓSTICO] Status definido como 'completed' para CNPJ {cnpj}")
                     else:
-                        logger.warning(f"[DIAGNÓSTICO] Query não encontrada para CNPJ {cnpj} ao tentar atualizar status")
+                        logger.warning(f"Query não encontrada para CNPJ {cnpj} ao tentar atualizar status")
                     
                     try:
-                        logger.info(f"[DIAGNÓSTICO] Iniciando commit para CNPJ {cnpj}")
+                        # Removidos logs de diagnóstico para economizar memória
                         self.db.commit()
-                        logger.info(f"[DIAGNÓSTICO] Commit realizado com sucesso para CNPJ {cnpj}")
                         
-                        # Verificação pós-commit
+                        # Verificação pós-commit simplificada
                         verification_query = self.db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).first()
-                        if verification_query:
-                            logger.info(f"[DIAGNÓSTICO] Verificação pós-commit: CNPJ {cnpj} tem status '{verification_query.status}'")
-                        else:
-                            logger.warning(f"[DIAGNÓSTICO] Verificação pós-commit: CNPJ {cnpj} não encontrado no banco de dados!")
+                        if not verification_query:
+                            logger.warning(f"Verificação pós-commit: CNPJ {cnpj} não encontrado no banco de dados!")
                     except Exception as e:
-                        logger.error(f"[DIAGNÓSTICO] Erro durante commit para CNPJ {cnpj}: {str(e)}")
+                        logger.error(f"Erro durante commit para CNPJ {cnpj}: {str(e)}")
                         logger.error(traceback.format_exc())
                         raise
                     
