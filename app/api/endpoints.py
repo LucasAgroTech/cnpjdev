@@ -14,7 +14,6 @@ from app.models.database import CNPJQuery, CNPJData
 from app.services.api_manager import APIManager
 from app.services.queue import CNPJQueue
 from app.utils.file_handler import process_cnpj_file, generate_cnpj_excel
-from office365_api.sharepoint_upload import upload_cnpj_data_to_sharepoint
 from app.config import (
     RECEITAWS_ENABLED, CNPJWS_ENABLED, CNPJA_OPEN_ENABLED,
     RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE
@@ -215,51 +214,6 @@ def export_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
-
-@router.post("/upload-to-sharepoint/", response_model=Dict[str, Any])
-def upload_to_sharepoint(db: Session = Depends(get_db)):
-    """
-    Exporta dados de CNPJs com status 'completed' para o SharePoint
-    """
-    logger.info("Iniciando upload de CNPJs para o SharePoint")
-    
-    try:
-        # Obtém os CNPJs com status 'completed'
-        completed_cnpj_queries = db.query(CNPJQuery.cnpj).filter(CNPJQuery.status == "completed").distinct().all()
-        completed_cnpjs = [q.cnpj for q in completed_cnpj_queries]
-        
-        if not completed_cnpjs:
-            logger.warning("Nenhum CNPJ com status 'completed' encontrado")
-            return {
-                "success": False,
-                "message": "Nenhum CNPJ com status 'completed' encontrado para upload",
-                "timestamp": datetime.now().isoformat()
-            }
-        
-        # Consulta os dados completos dos CNPJs
-        cnpj_data_list = db.query(CNPJData).filter(CNPJData.cnpj.in_(completed_cnpjs)).all()
-        
-        if not cnpj_data_list:
-            logger.warning("Nenhum dado encontrado para os CNPJs com status 'completed'")
-            return {
-                "success": False,
-                "message": "Nenhum dado encontrado para os CNPJs com status 'completed'",
-                "timestamp": datetime.now().isoformat()
-            }
-        
-        # Faz upload para o SharePoint
-        result = upload_cnpj_data_to_sharepoint(cnpj_data_list)
-        
-        logger.info(f"Upload para SharePoint concluído: {result}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Erro ao fazer upload para SharePoint: {str(e)}")
-        return {
-            "success": False,
-            "message": f"Erro ao fazer upload para SharePoint: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }
 
 # Cria um router separado para endpoints de administração
 admin_router = APIRouter(prefix="/admin", tags=["admin"])

@@ -13,4 +13,3 @@ jinja2
 pydantic
 asyncio
 requests
-Office365-REST-Python-Client

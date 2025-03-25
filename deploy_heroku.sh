@@ -63,37 +63,11 @@ echo "Número máximo de tentativas para processar um CNPJ (padrão: 3):"
 read MAX_RETRY_ATTEMPTS
 MAX_RETRY_ATTEMPTS=${MAX_RETRY_ATTEMPTS:-3}
 
-# Configurações do SharePoint
-echo "Configurando variáveis para integração com SharePoint..."
-echo "Digite o nome de usuário/email para autenticação no SharePoint:"
-read SHAREPOINT_USERNAME
-
-echo "Digite a senha para autenticação no SharePoint:"
-read -s SHAREPOINT_PASSWORD
-echo ""
-
-echo "Digite a URL do site SharePoint (ex: https://empresa.sharepoint.com/sites/SiteName):"
-read SHAREPOINT_URL_SITE
-
-echo "Digite o nome do site SharePoint (ex: SiteName):"
-read SHAREPOINT_SITE_NAME
-
-echo "Digite o caminho da biblioteca de documentos (ex: Documentos Compartilhados/):"
-read SHAREPOINT_DOC_LIBRARY
-
 # Configura as variáveis no Heroku
 heroku config:set --app $APP_NAME REQUESTS_PER_MINUTE=$REQUESTS_PER_MINUTE
 heroku config:set --app $APP_NAME DEBUG=$DEBUG
 heroku config:set --app $APP_NAME AUTO_RESTART_QUEUE=$AUTO_RESTART_QUEUE
 heroku config:set --app $APP_NAME MAX_RETRY_ATTEMPTS=$MAX_RETRY_ATTEMPTS
-
-# Configura as variáveis do SharePoint
-heroku config:set --app $APP_NAME USERNAME="$SHAREPOINT_USERNAME"
-heroku config:set --app $APP_NAME PASSWORD="$SHAREPOINT_PASSWORD"
-heroku config:set --app $APP_NAME sharepoint_url_site="$SHAREPOINT_URL_SITE"
-heroku config:set --app $APP_NAME sharepoint_site_name="$SHAREPOINT_SITE_NAME"
-heroku config:set --app $APP_NAME sharepoint_doc_library="$SHAREPOINT_DOC_LIBRARY"
-heroku config:set --app $APP_NAME ROOT="/app"
 
 # Faz o deploy
 echo "Fazendo deploy do código..."
