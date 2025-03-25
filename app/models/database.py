@@ -5,10 +5,16 @@ import os
 from datetime import datetime
 from app.config import DATABASE_URL
 
-engine = create_engine(DATABASE_URL)
+# Create engine with appropriate connect_args
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# Cria as tabelas no banco de dados se não existirem
+def create_tables():
+    Base.metadata.create_all(bind=engine)
 
 class CNPJQuery(Base):
     """Modelo para rastrear consultas de CNPJ"""
