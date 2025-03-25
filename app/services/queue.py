@@ -492,6 +492,7 @@ class CNPJQueue:
                             simples_nacional_date=simples_nacional_date
                         )
                         self.db.add(cnpj_data)
+                        logger.info(f"[DIAGNÓSTICO] Novo registro CNPJData criado para CNPJ {cnpj}")
                     else:
                         cnpj_data.raw_data = result
                         cnpj_data.company_name = company_name
@@ -506,59 +507,105 @@ class CNPJQueue:
                         cnpj_data.simples_nacional = simples_nacional
                         cnpj_data.simples_nacional_date = simples_nacional_date
                         cnpj_data.updated_at = datetime.utcnow()
+                        logger.info(f"[DIAGNÓSTICO] Registro CNPJData existente atualizado para CNPJ {cnpj}")
                     
                     # Atualiza o status da consulta
                     if query:
+                        logger.info(f"[DIAGNÓSTICO] Atualizando status do CNPJ {cnpj}. Status atual: {query.status}, ID da sessão: {id(self.db)}")
                         query.status = "completed"
                         query.error_message = None
                         query.updated_at = datetime.utcnow()
+                        logger.info(f"[DIAGNÓSTICO] Status definido como 'completed' para CNPJ {cnpj}")
+                    else:
+                        logger.warning(f"[DIAGNÓSTICO] Query não encontrada para CNPJ {cnpj} ao tentar atualizar status")
                     
-                    self.db.commit()
+                    try:
+                        logger.info(f"[DIAGNÓSTICO] Iniciando commit para CNPJ {cnpj}")
+                        self.db.commit()
+                        logger.info(f"[DIAGNÓSTICO] Commit realizado com sucesso para CNPJ {cnpj}")
+                        
+                        # Verificação pós-commit
+                        verification_query = self.db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).first()
+                        if verification_query:
+                            logger.info(f"[DIAGNÓSTICO] Verificação pós-commit: CNPJ {cnpj} tem status '{verification_query.status}'")
+                        else:
+                            logger.warning(f"[DIAGNÓSTICO] Verificação pós-commit: CNPJ {cnpj} não encontrado no banco de dados!")
+                    except Exception as e:
+                        logger.error(f"[DIAGNÓSTICO] Erro durante commit para CNPJ {cnpj}: {str(e)}")
+                        logger.error(traceback.format_exc())
+                        raise
+                    
                     logger.info(f"CNPJ {cnpj} processado com sucesso")
                     
                     # Marca como sucesso para sair do loop de retry
                     success = True
                     
                 except Exception as e:
-                    retry_count += 1
-                    logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
+                    error_message = str(e)
                     
-                    # Se for a última tentativa, verifica o tipo de erro
-                    if retry_count >= max_retries:
-                        error_message = str(e)
-                        logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {error_message}")
-                        logger.debug(traceback.format_exc())
+                    # Verifica se é um erro de violação de restrição única
+                    if "duplicate key value violates unique constraint" in error_message:
+                        logger.info(f"CNPJ {cnpj} já existe no banco de dados, marcando como completed e pulando para o próximo")
                         
-                        # Atualiza o status da consulta com base no tipo de erro
+                        # Atualiza o status da consulta para completed
                         if query:
-                            # Verifica se é um erro de limite de requisições
-                            if "Limite de requisições excedido" in error_message:
-                                query.status = "rate_limited"
-                                logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
-                            else:
-                                query.status = "error"
-                            
-                            query.error_message = error_message
+                            query.status = "completed"
+                            query.error_message = None
                             query.updated_at = datetime.utcnow()
                             self.db.commit()
+                            
+                        # Marca como sucesso para sair do loop de retry
+                        success = True
+                    else:
+                        # Para outros erros, mantém a lógica de retry existente
+                        retry_count += 1
+                        logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
+                        
+                        # Se for a última tentativa, verifica o tipo de erro
+                        if retry_count >= max_retries:
+                            logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {error_message}")
+                            logger.debug(traceback.format_exc())
+                            
+                            # Atualiza o status da consulta com base no tipo de erro
+                            if query:
+                                # Verifica se é um erro de limite de requisições
+                                if "Limite de requisições excedido" in error_message:
+                                    query.status = "rate_limited"
+                                    logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
+                                else:
+                                    query.status = "error"
+                                
+                                query.error_message = error_message
+                                query.updated_at = datetime.utcnow()
+                                self.db.commit()
         except Exception as e:
-            logger.error(f"Erro global ao processar CNPJ {cnpj}: {str(e)}")
+            error_message = str(e)
+            logger.error(f"Erro global ao processar CNPJ {cnpj}: {error_message}")
             logger.debug(traceback.format_exc())
             
-            # Atualiza o status da consulta com base no tipo de erro
-            if query and query.status == "processing":
-                error_message = str(e)
+            # Verifica se é um erro de violação de restrição única
+            if "duplicate key value violates unique constraint" in error_message:
+                logger.info(f"CNPJ {cnpj} já existe no banco de dados, marcando como completed e pulando para o próximo")
                 
-                # Verifica se é um erro de limite de requisições
-                if "Limite de requisições excedido" in error_message:
-                    query.status = "rate_limited"
-                    logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
-                else:
-                    query.status = "error"
-                
-                query.error_message = f"Erro global: {error_message}"
-                query.updated_at = datetime.utcnow()
-                self.db.commit()
+                # Atualiza o status da consulta para completed
+                if query and query.status == "processing":
+                    query.status = "completed"
+                    query.error_message = None
+                    query.updated_at = datetime.utcnow()
+                    self.db.commit()
+            else:
+                # Atualiza o status da consulta com base no tipo de erro
+                if query and query.status == "processing":
+                    # Verifica se é um erro de limite de requisições
+                    if "Limite de requisições excedido" in error_message:
+                        query.status = "rate_limited"
+                        logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
+                    else:
+                        query.status = "error"
+                    
+                    query.error_message = f"Erro global: {error_message}"
+                    query.updated_at = datetime.utcnow()
+                    self.db.commit()
         finally:
             # Marca a tarefa como concluída
             queue = await self.queue

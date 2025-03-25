@@ -17,7 +17,7 @@ CNPJA_OPEN_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJA_OPEN_REQUESTS_PE
 REQUESTS_PER_MINUTE: int = int(os.environ.get("REQUESTS_PER_MINUTE", "3"))
 
 # Configuração do banco de dados
-DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./test.db")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 

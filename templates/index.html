@@ -801,6 +801,8 @@
                                     <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
                                     <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados</a></li>
                                     <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Seleção Atual</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" id="sharepoint-upload-btn"><i class="bi bi-cloud-upload me-2"></i>Enviar para SharePoint</a></li>
                                 </ul>
                             </div>
                             <button class="btn btn-sm btn-outline-primary" id="refresh-status-btn">
@@ -1497,7 +1499,54 @@
             
             // Inicia o efeito hexadecimal
             updateHexCode();
+            
+            // Botão para upload para SharePoint
+            document.getElementById('sharepoint-upload-btn').addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                if (confirm('Deseja enviar os CNPJs concluídos para o SharePoint?')) {
+                    try {
+                        this.innerHTML = '<i class="bi bi-arrow-repeat me-2 spin"></i>Enviando...';
+                        this.disabled = true;
+                        
+                        const response = await fetch('/api/upload-to-sharepoint/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert('Upload para SharePoint concluído com sucesso!');
+                        } else {
+                            alert(`Erro no upload: ${result.message}`);
+                        }
+                    } catch (error) {
+                        console.error('Erro ao fazer upload para SharePoint:', error);
+                        alert('Erro ao fazer upload para SharePoint. Verifique o console para mais detalhes.');
+                    } finally {
+                        this.innerHTML = '<i class="bi bi-cloud-upload me-2"></i>Enviar para SharePoint';
+                        this.disabled = false;
+                    }
+                }
+            });
         });
+        
+        // Adiciona estilo para animação de rotação
+        document.head.insertAdjacentHTML('beforeend', `
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                .spin {
+                    animation: spin 1s linear infinite;
+                    display: inline-block;
+                }
+            </style>
+        `);
     </script>
 </body>
 </html>
