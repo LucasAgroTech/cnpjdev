@@ -553,12 +553,15 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     queued = 0
     rate_limited = 0
     
+    logger.info(f"[DIAGNÓSTICO] Obtendo status para {total} CNPJs, ID da sessão: {id(db)}")
+    
     for cnpj in cnpjs:
         query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
         
         if query:
             status = query.status
             error_message = query.error_message
+            logger.info(f"[DIAGNÓSTICO] CNPJ {cnpj} encontrado com status '{status}', ID: {query.id}, atualizado em: {query.updated_at}")
             
             if status == "completed":
                 completed += 1
@@ -573,12 +576,15 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
         else:
             status = "unknown"
             error_message = None
+            logger.warning(f"[DIAGNÓSTICO] CNPJ {cnpj} não encontrado no banco de dados")
         
         statuses.append(schemas.CNPJStatus(
             cnpj=cnpj,
             status=status,
             error_message=error_message
         ))
+    
+    logger.info(f"[DIAGNÓSTICO] Resumo do status: total={total}, completed={completed}, processing={processing}, error={error}, queued={queued}, rate_limited={rate_limited}")
     
     return schemas.CNPJBatchStatus(
         total=total,
