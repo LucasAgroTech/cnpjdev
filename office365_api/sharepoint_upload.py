@@ -37,7 +37,12 @@ def upload_cnpj_data_to_sharepoint(cnpj_data_list, filename="consulta_cnpjs_apis
         excel_data = generate_cnpj_excel(cnpj_data_list)
         
         # Salva temporariamente o arquivo
-        temp_file_path = os.path.join(os.path.dirname(__file__), 'storage', 'upload', filename)
+        storage_dir = os.path.join(os.path.dirname(__file__), 'storage', 'upload')
+        
+        # Garante que o diretório de armazenamento existe
+        os.makedirs(storage_dir, exist_ok=True)
+        
+        temp_file_path = os.path.join(storage_dir, filename)
         with open(temp_file_path, 'wb') as f:
             f.write(excel_data)
         
