@@ -115,33 +115,9 @@ class CNPJQueue:
             
             # Usa uma transação para garantir atomicidade
             count = 0
-            
-            # Verifica se já existe uma transação em andamento
-            in_transaction = False
             try:
-                # Tenta executar uma consulta simples para verificar se já estamos em uma transação
-                from sqlalchemy import text
-                self.db.execute(text("SELECT 1"))
-                # Se chegou aqui, não estamos em uma transação explícita
-                in_transaction = False
-            except Exception as e:
-                if "A transaction is already begun on this Session" in str(e):
-                    logger.debug("Já existe uma transação em andamento, usando a transação existente")
-                    in_transaction = True
-                else:
-                    # Outro tipo de erro, propaga
-                    logger.error(f"Erro ao verificar transação: {str(e)}")
-                    # Tenta fazer rollback para limpar qualquer transação pendente
-                    try:
-                        self.db.rollback()
-                        logger.info("Rollback realizado com sucesso")
-                    except Exception as rollback_error:
-                        logger.error(f"Erro ao fazer rollback: {str(rollback_error)}")
-            
-            try:
-                # Inicia uma transação apenas se não estiver em uma
-                if not in_transaction:
-                    self.db.begin()
+                # Inicia uma transação
+                self.db.begin()
                 
                 # Usa FOR UPDATE para bloquear as linhas durante a atualização
                 stuck_queries = self.db.query(CNPJQuery).filter(
@@ -153,8 +129,7 @@ class CNPJQueue:
                 
                 if not stuck_queries:
                     logger.debug("Nenhum CNPJ preso em processamento encontrado")
-                    if not in_transaction:
-                        self.db.rollback()  # Não há nada para atualizar, faz rollback da transação
+                    self.db.rollback()  # Não há nada para atualizar, faz rollback da transação
                     return 0
                 
                 # Redefine o status para "error" ou mantém "rate_limited"
@@ -170,14 +145,12 @@ class CNPJQueue:
                     query.updated_at = now
                     count += 1
                 
-                # Commit da transação apenas se iniciamos uma nova
-                if not in_transaction:
-                    self.db.commit()
-                    logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
+                # Commit da transação
+                self.db.commit()
+                logger.warning(f"Redefinidos {count} CNPJs presos em processamento")
             except Exception as e:
-                # Em caso de erro, faz rollback da transação apenas se iniciamos uma nova
-                if not in_transaction:
-                    self.db.rollback()
+                # Em caso de erro, faz rollback da transação
+                self.db.rollback()
                 logger.error(f"Erro na transação ao limpar CNPJs presos: {str(e)}")
                 return 0
                 
@@ -519,7 +492,6 @@ class CNPJQueue:
                             simples_nacional_date=simples_nacional_date
                         )
                         self.db.add(cnpj_data)
-                        # Removido log de diagnóstico para economizar memória
                     else:
                         cnpj_data.raw_data = result
                         cnpj_data.company_name = company_name
@@ -534,101 +506,59 @@ class CNPJQueue:
                         cnpj_data.simples_nacional = simples_nacional
                         cnpj_data.simples_nacional_date = simples_nacional_date
                         cnpj_data.updated_at = datetime.utcnow()
-                        # Removido log de diagnóstico para economizar memória
                     
                     # Atualiza o status da consulta
                     if query:
-                        # Removidos logs de diagnóstico para economizar memória
                         query.status = "completed"
                         query.error_message = None
                         query.updated_at = datetime.utcnow()
-                    else:
-                        logger.warning(f"Query não encontrada para CNPJ {cnpj} ao tentar atualizar status")
                     
-                    try:
-                        # Removidos logs de diagnóstico para economizar memória
-                        self.db.commit()
-                        
-                        # Verificação pós-commit simplificada
-                        verification_query = self.db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).first()
-                        if not verification_query:
-                            logger.warning(f"Verificação pós-commit: CNPJ {cnpj} não encontrado no banco de dados!")
-                    except Exception as e:
-                        logger.error(f"Erro durante commit para CNPJ {cnpj}: {str(e)}")
-                        logger.error(traceback.format_exc())
-                        raise
-                    
+                    self.db.commit()
                     logger.info(f"CNPJ {cnpj} processado com sucesso")
                     
                     # Marca como sucesso para sair do loop de retry
                     success = True
                     
                 except Exception as e:
-                    error_message = str(e)
+                    retry_count += 1
+                    logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
                     
-                    # Verifica se é um erro de violação de restrição única
-                    if "duplicate key value violates unique constraint" in error_message:
-                        logger.info(f"CNPJ {cnpj} já existe no banco de dados, marcando como completed e pulando para o próximo")
+                    # Se for a última tentativa, verifica o tipo de erro
+                    if retry_count >= max_retries:
+                        error_message = str(e)
+                        logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {error_message}")
+                        logger.debug(traceback.format_exc())
                         
-                        # Atualiza o status da consulta para completed
+                        # Atualiza o status da consulta com base no tipo de erro
                         if query:
-                            query.status = "completed"
-                            query.error_message = None
+                            # Verifica se é um erro de limite de requisições
+                            if "Limite de requisições excedido" in error_message:
+                                query.status = "rate_limited"
+                                logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
+                            else:
+                                query.status = "error"
+                            
+                            query.error_message = error_message
                             query.updated_at = datetime.utcnow()
                             self.db.commit()
-                            
-                        # Marca como sucesso para sair do loop de retry
-                        success = True
-                    else:
-                        # Para outros erros, mantém a lógica de retry existente
-                        retry_count += 1
-                        logger.warning(f"Erro ao processar CNPJ {cnpj} (tentativa {retry_count}/{max_retries}): {str(e)}")
-                        
-                        # Se for a última tentativa, verifica o tipo de erro
-                        if retry_count >= max_retries:
-                            logger.error(f"Falha ao processar CNPJ {cnpj} após {max_retries} tentativas: {error_message}")
-                            logger.debug(traceback.format_exc())
-                            
-                            # Atualiza o status da consulta com base no tipo de erro
-                            if query:
-                                # Verifica se é um erro de limite de requisições
-                                if "Limite de requisições excedido" in error_message:
-                                    query.status = "rate_limited"
-                                    logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
-                                else:
-                                    query.status = "error"
-                                
-                                query.error_message = error_message
-                                query.updated_at = datetime.utcnow()
-                                self.db.commit()
         except Exception as e:
-            error_message = str(e)
-            logger.error(f"Erro global ao processar CNPJ {cnpj}: {error_message}")
+            logger.error(f"Erro global ao processar CNPJ {cnpj}: {str(e)}")
             logger.debug(traceback.format_exc())
             
-            # Verifica se é um erro de violação de restrição única
-            if "duplicate key value violates unique constraint" in error_message:
-                logger.info(f"CNPJ {cnpj} já existe no banco de dados, marcando como completed e pulando para o próximo")
+            # Atualiza o status da consulta com base no tipo de erro
+            if query and query.status == "processing":
+                error_message = str(e)
                 
-                # Atualiza o status da consulta para completed
-                if query and query.status == "processing":
-                    query.status = "completed"
-                    query.error_message = None
-                    query.updated_at = datetime.utcnow()
-                    self.db.commit()
-            else:
-                # Atualiza o status da consulta com base no tipo de erro
-                if query and query.status == "processing":
-                    # Verifica se é um erro de limite de requisições
-                    if "Limite de requisições excedido" in error_message:
-                        query.status = "rate_limited"
-                        logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
-                    else:
-                        query.status = "error"
-                    
-                    query.error_message = f"Erro global: {error_message}"
-                    query.updated_at = datetime.utcnow()
-                    self.db.commit()
+                # Verifica se é um erro de limite de requisições
+                if "Limite de requisições excedido" in error_message:
+                    query.status = "rate_limited"
+                    logger.warning(f"CNPJ {cnpj} marcado como rate_limited devido a limite de requisições")
+                else:
+                    query.status = "error"
+                
+                query.error_message = f"Erro global: {error_message}"
+                query.updated_at = datetime.utcnow()
+                self.db.commit()
         finally:
             # Marca a tarefa como concluída
             queue = await self.queue

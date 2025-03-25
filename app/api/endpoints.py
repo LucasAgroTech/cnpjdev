@@ -553,15 +553,12 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     queued = 0
     rate_limited = 0
     
-    # Removido log de diagnóstico detalhado para economizar memória
-    
     for cnpj in cnpjs:
         query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
         
         if query:
             status = query.status
             error_message = query.error_message
-            # Removido log de diagnóstico individual para cada CNPJ
             
             if status == "completed":
                 completed += 1
@@ -576,16 +573,12 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
         else:
             status = "unknown"
             error_message = None
-            # Removido log de diagnóstico para CNPJs não encontrados
         
         statuses.append(schemas.CNPJStatus(
             cnpj=cnpj,
             status=status,
             error_message=error_message
         ))
-    
-    # Mantido apenas o log de resumo para monitoramento geral
-    logger.info(f"Resumo do status: total={total}, completed={completed}, processing={processing}, error={error}, queued={queued}, rate_limited={rate_limited}")
     
     return schemas.CNPJBatchStatus(
         total=total,
