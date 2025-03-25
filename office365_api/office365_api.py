@@ -59,7 +59,17 @@ class SharePoint:
 
     def upload_file(self, folder_name, sharepoint_site, sharepoint_site_name, sharepoint_doc, file_name, content):
         conn = self._auth(sharepoint_site)
-        target_folder_url = f'/sites/{sharepoint_site_name}/{sharepoint_doc}/{folder_name}'
+        
+        # Evita barra dupla quando folder_name é vazio
+        if folder_name:
+            target_folder_url = f'/sites/{sharepoint_site_name}/{sharepoint_doc}/{folder_name}'
+        else:
+            # Remove a barra final se sharepoint_doc já terminar com uma barra
+            if sharepoint_doc.endswith('/'):
+                sharepoint_doc = sharepoint_doc.rstrip('/')
+            target_folder_url = f'/sites/{sharepoint_site_name}/{sharepoint_doc}'
+        
+        print(f"Debug: URL da pasta de destino -> {target_folder_url}")
         target_folder = conn.web.get_folder_by_server_relative_path(target_folder_url)
         response = target_folder.upload_file(file_name, content).execute_query()
         return response

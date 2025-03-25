@@ -51,8 +51,20 @@ def upload_cnpj_data_to_sharepoint(cnpj_data_list, filename="consulta_cnpjs_apis
         sharepoint_site_name = os.getenv('sharepoint_site_name')
         sharepoint_doc = os.getenv('sharepoint_doc_library')
         
+        # Log das configurações para diagnóstico
+        logger.info(f"Configurações do SharePoint:")
+        logger.info(f"  URL do site: {sharepoint_site}")
+        logger.info(f"  Nome do site: {sharepoint_site_name}")
+        logger.info(f"  Biblioteca de documentos: {sharepoint_doc}")
+        
         # Faz upload para o SharePoint
         sharepoint = SharePoint()
+        
+        # Verifica se a biblioteca de documentos termina com barra
+        if sharepoint_doc and sharepoint_doc.endswith('/'):
+            sharepoint_doc = sharepoint_doc.rstrip('/')
+            logger.info(f"Biblioteca de documentos ajustada: {sharepoint_doc}")
+        
         response = sharepoint.upload_file(
             folder_name="",  # Pasta raiz
             sharepoint_site=sharepoint_site,
