@@ -111,8 +111,6 @@ async def main():
         else:
             logger.info(f"Fila reiniciada com sucesso. Processando {loaded_count} CNPJs pendentes.")
             logger.info(f"O sistema processará exatamente {total_rpm} CNPJs por minuto.")
-            logger.info("O sistema verificará a cada 30 segundos se há CNPJs suficientes na fila.")
-            logger.info("Isso garante que sempre haja CNPJs sendo processados continuamente.")
             
             # Aguarda um pouco para permitir que o processamento comece
             await asyncio.sleep(2)

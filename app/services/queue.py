@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 # Constante para o intervalo exato entre requisições para atingir 11 por minuto
 EXACT_INTERVAL_SECONDS = 60.0 / REQUESTS_PER_MINUTE
 
-# Intervalo para verificar se a fila tem CNPJs suficientes (a cada 30 segundos)
-QUEUE_CHECK_INTERVAL = 30
-
 # Singleton para o gerenciador de fila
 _queue_instance = None
 _queue_lock = asyncio.Lock()
@@ -286,14 +283,8 @@ class CNPJQueue:
         
         Limita o número de CNPJs em processamento simultâneo para respeitar
         o limite de requisições por minuto da API
-        
-        Garante que sempre haja CNPJs suficientes na fila para manter o processamento
-        de exatamente REQUESTS_PER_MINUTE CNPJs por minuto
         """
         self.processing = True
-        
-        # Último momento em que verificamos se a fila tem CNPJs suficientes
-        last_queue_check = time.time()
         
         try:
             # Obtém a fila
@@ -307,32 +298,7 @@ class CNPJQueue:
             min_interval_seconds = EXACT_INTERVAL_SECONDS
             last_process_time = 0
             
-            while True:
-                # Verifica se a fila está vazia
-                if queue.empty():
-                    logger.info("Fila vazia. Verificando se há CNPJs pendentes no banco de dados...")
-                    loaded_count = await self.load_pending_cnpjs()
-                    if loaded_count == 0:
-                        logger.info("Nenhum CNPJ pendente encontrado. Finalizando processamento.")
-                        break
-                
-                # Verifica periodicamente se a fila tem CNPJs suficientes
-                current_time = time.time()
-                if current_time - last_queue_check > QUEUE_CHECK_INTERVAL:
-                    last_queue_check = current_time
-                    
-                    # Verifica quantos CNPJs estão na fila e em processamento
-                    queue_size = queue.qsize()
-                    processing_count = await self.get_processing_count()
-                    total_cnpjs = queue_size + processing_count
-                    
-                    logger.info(f"Status da fila: {queue_size} na fila, {processing_count} em processamento, {total_cnpjs} total")
-                    
-                    # Se o total for menor que o dobro do limite por minuto, carrega mais CNPJs pendentes
-                    if total_cnpjs < REQUESTS_PER_MINUTE * 2:
-                        logger.info(f"Fila com poucos CNPJs ({total_cnpjs}). Carregando mais CNPJs pendentes...")
-                        await self.load_pending_cnpjs()
-                
+            while not queue.empty():
                 # Limpa CNPJs presos em processamento
                 await self.cleanup_stuck_processing()
                 

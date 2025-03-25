@@ -21,15 +21,6 @@ No arquivo `app/services/queue.py`, implementamos um controle preciso do interva
 - Substituímos o cálculo do intervalo mínimo entre requisições, removendo o segundo extra de segurança que estava sendo adicionado
 - Definimos uma constante `EXACT_INTERVAL_SECONDS` que calcula o intervalo exato para atingir 11 requisições por minuto (60/11 ≈ 5.45 segundos)
 - Ajustamos o limite de processamento simultâneo para exatamente `REQUESTS_PER_MINUTE` (11) em vez de `REQUESTS_PER_MINUTE + 2`
-- Adicionamos um mecanismo de verificação periódica para garantir que sempre haja CNPJs suficientes na fila
-
-```python
-# Constante para o intervalo exato entre requisições para atingir 11 por minuto
-EXACT_INTERVAL_SECONDS = 60.0 / REQUESTS_PER_MINUTE
-
-# Intervalo para verificar se a fila tem CNPJs suficientes (a cada 30 segundos)
-QUEUE_CHECK_INTERVAL = 30
-```
 
 ```python
 # Constante para o intervalo exato entre requisições para atingir 11 por minuto
@@ -107,34 +98,6 @@ CNPJA_OPEN_REQUESTS_PER_MINUTE=5
 REQUESTS_PER_MINUTE=11
 ```
 
-### 3. Garantia de Processamento Contínuo
-
-Implementamos um mecanismo para garantir que sempre haja CNPJs suficientes na fila para manter o processamento contínuo de 11 CNPJs por minuto:
-
-- Adicionamos verificação periódica do tamanho da fila a cada 30 segundos
-- Se o número total de CNPJs (na fila + em processamento) for menor que o dobro do limite por minuto, o sistema carrega mais CNPJs pendentes
-- Modificamos o loop principal para nunca parar enquanto houver CNPJs pendentes no banco de dados
-- Adicionamos logs detalhados sobre o status da fila para facilitar o monitoramento
-
-```python
-# Verifica periodicamente se a fila tem CNPJs suficientes
-current_time = time.time()
-if current_time - last_queue_check > QUEUE_CHECK_INTERVAL:
-    last_queue_check = current_time
-    
-    # Verifica quantos CNPJs estão na fila e em processamento
-    queue_size = queue.qsize()
-    processing_count = await self.get_processing_count()
-    total_cnpjs = queue_size + processing_count
-    
-    logger.info(f"Status da fila: {queue_size} na fila, {processing_count} em processamento, {total_cnpjs} total")
-    
-    # Se o total for menor que o dobro do limite por minuto, carrega mais CNPJs pendentes
-    if total_cnpjs < REQUESTS_PER_MINUTE * 2:
-        logger.info(f"Fila com poucos CNPJs ({total_cnpjs}). Carregando mais CNPJs pendentes...")
-        await self.load_pending_cnpjs()
-```
-
 ## Benefícios
 
 Estas otimizações garantem que:
@@ -142,8 +105,6 @@ Estas otimizações garantem que:
 1. O sistema processe consistentemente 11 CNPJs por minuto, maximizando o throughput
 2. As APIs sejam utilizadas de forma eficiente, priorizando as que têm maior capacidade disponível
 3. O sistema respeite os limites individuais de cada API, evitando erros de limite excedido
-4. A fila sempre tenha CNPJs suficientes para manter o processamento contínuo
-5. O sistema nunca fique ocioso enquanto houver CNPJs pendentes para processar
 
 ## Monitoramento
 
