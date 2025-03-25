@@ -48,7 +48,7 @@ def fix_incomplete_status(dry_run=False):
         # Verifica se as tabelas existem
         logger.info("Verificando tabelas...")
         inspector = engine.dialect.inspector
-        tables = inspector.get_table_names()
+        tables = inspector.get_table_names(schema="public")
         if "cnpj_queries" not in tables or "cnpj_data" not in tables:
             logger.error(f"Tabelas necessárias não encontradas. Tabelas existentes: {tables}")
             return
