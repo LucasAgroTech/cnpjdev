@@ -14,7 +14,7 @@ CNPJWS_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJWS_REQUESTS_PER_MINUTE
 CNPJA_OPEN_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJA_OPEN_REQUESTS_PER_MINUTE", "5"))
 
 # Mantém para compatibilidade
-REQUESTS_PER_MINUTE: int = int(os.environ.get("REQUESTS_PER_MINUTE", "3"))
+REQUESTS_PER_MINUTE: int = int(os.environ.get("REQUESTS_PER_MINUTE", "11"))
 
 # Configuração do banco de dados
 DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./test.db")

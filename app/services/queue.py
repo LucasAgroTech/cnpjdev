@@ -291,8 +291,7 @@ class CNPJQueue:
             processed_count = 0
             
             # Calcula o intervalo mínimo entre requisições para respeitar o limite de requisições por minuto
-            # Adiciona 1 segundo extra por segurança
-            min_interval_seconds = (60.0 / REQUESTS_PER_MINUTE) + 1
+            min_interval_seconds = (60.0 / REQUESTS_PER_MINUTE)
             last_process_time = 0
             
             while not queue.empty():
@@ -303,9 +302,9 @@ class CNPJQueue:
                 processing_count = await self.get_processing_count()
                 
                 # Limita o número de CNPJs em processamento simultâneo
-                # Mantém no máximo REQUESTS_PER_MINUTE + 2 CNPJs em processamento
+                # Mantém no máximo REQUESTS_PER_MINUTE + 5 CNPJs em processamento
                 # para garantir que sempre haja CNPJs prontos para serem processados
-                max_processing = REQUESTS_PER_MINUTE + 2
+                max_processing = REQUESTS_PER_MINUTE + 5
                 
                 if processing_count >= max_processing:
                     logger.debug(f"Já existem {processing_count} CNPJs em processamento. Aguardando...")
