@@ -16,6 +16,11 @@ CNPJA_OPEN_REQUESTS_PER_MINUTE: int = int(os.environ.get("CNPJA_OPEN_REQUESTS_PE
 # Mantém para compatibilidade
 REQUESTS_PER_MINUTE: int = int(os.environ.get("REQUESTS_PER_MINUTE", "3"))
 
+# Configuração de controle de taxa
+MAX_CONCURRENT_PROCESSING: int = int(os.environ.get("MAX_CONCURRENT_PROCESSING", "6"))
+API_COOLDOWN_AFTER_RATE_LIMIT: int = int(os.environ.get("API_COOLDOWN_AFTER_RATE_LIMIT", "30"))
+API_RATE_LIMIT_SAFETY_FACTOR: float = float(os.environ.get("API_RATE_LIMIT_SAFETY_FACTOR", "0.9"))
+
 # Configuração do banco de dados
 DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):

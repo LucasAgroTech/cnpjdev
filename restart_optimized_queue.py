@@ -78,6 +78,14 @@ async def main():
         logger.info(f"- CNPJa Open: {'habilitada' if CNPJA_OPEN_ENABLED else 'desabilitada'} ({CNPJA_OPEN_REQUESTS_PER_MINUTE} req/min)")
         logger.info(f"Total de requisições por minuto: {total_rpm}")
         
+        # Exibe informações sobre as configurações de controle de taxa
+        from app.config import MAX_CONCURRENT_PROCESSING, API_COOLDOWN_AFTER_RATE_LIMIT, API_RATE_LIMIT_SAFETY_FACTOR
+        
+        logger.info(f"Configuração de controle de taxa:")
+        logger.info(f"- Máximo de CNPJs em processamento simultâneo: {MAX_CONCURRENT_PROCESSING}")
+        logger.info(f"- Tempo de cooldown após erro 429: {API_COOLDOWN_AFTER_RATE_LIMIT}s")
+        logger.info(f"- Fator de segurança para limites de API: {API_RATE_LIMIT_SAFETY_FACTOR}")
+        
         # Aguarda um pouco para garantir que o processamento seja iniciado
         await asyncio.sleep(2)
         

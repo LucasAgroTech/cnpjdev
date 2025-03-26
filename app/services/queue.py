@@ -9,7 +9,11 @@ from app.models.database import CNPJQuery, CNPJData
 from app.services.api_manager import APIManager
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
-from app.config import MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE, RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE
+from app.config import (
+    MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE, 
+    RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE,
+    MAX_CONCURRENT_PROCESSING
+)
 
 logger = logging.getLogger(__name__)
 
@@ -312,12 +316,10 @@ class CNPJQueue:
                 processing_count = await self.get_processing_count()
                 
                 # Limita o número de CNPJs em processamento simultâneo
-                # Mantém exatamente o número total de requisições por minuto em processamento
-                # para garantir que estamos processando na taxa máxima permitida
-                max_processing = TOTAL_REQUESTS_PER_MINUTE
-                
-                if processing_count >= max_processing:
-                    logger.debug(f"Já existem {processing_count} CNPJs em processamento. Aguardando...")
+                # Usa o valor configurado de MAX_CONCURRENT_PROCESSING para evitar sobrecarga
+                # Este valor é menor que TOTAL_REQUESTS_PER_MINUTE para dar margem de segurança
+                if processing_count >= MAX_CONCURRENT_PROCESSING:
+                    logger.debug(f"Já existem {processing_count} CNPJs em processamento (limite: {MAX_CONCURRENT_PROCESSING}). Aguardando...")
                     await asyncio.sleep(min_interval_seconds)
                     continue
                 

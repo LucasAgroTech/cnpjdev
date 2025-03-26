@@ -82,6 +82,14 @@ async def main():
         print(f"- CNPJa Open: {'habilitada' if CNPJA_OPEN_ENABLED else 'desabilitada'} ({CNPJA_OPEN_REQUESTS_PER_MINUTE} req/min)")
         print(f"Total de requisições por minuto: {total_rpm}")
         
+        # Exibe informações sobre as configurações de controle de taxa
+        from app.config import MAX_CONCURRENT_PROCESSING, API_COOLDOWN_AFTER_RATE_LIMIT, API_RATE_LIMIT_SAFETY_FACTOR
+        
+        print("\nConfiguração de controle de taxa:")
+        print(f"- Máximo de CNPJs em processamento simultâneo: {MAX_CONCURRENT_PROCESSING}")
+        print(f"- Tempo de cooldown após erro 429: {API_COOLDOWN_AFTER_RATE_LIMIT}s")
+        print(f"- Fator de segurança para limites de API: {API_RATE_LIMIT_SAFETY_FACTOR}")
+        
         print("\nStatus da fila:")
         
         # Conta CNPJs por status

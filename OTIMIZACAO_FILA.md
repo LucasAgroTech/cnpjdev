@@ -63,22 +63,68 @@ else:
     score = available_capacity + random_factor
 ```
 
-### 3. Controle Preciso do Número de CNPJs em Processamento
+### 3. Controle Rigoroso de Taxa por API Individual
 
-O sistema agora limita o número de CNPJs em processamento simultâneo para exatamente o número total de requisições por minuto que as APIs suportam:
+Foi implementado um controle de taxa rigoroso para cada API individualmente, garantindo que os limites não sejam excedidos:
+
+```python
+# Verifica se uma API pode ser usada no momento
+def can_use_api(self, api_name: str) -> bool:
+    now = time.time()
+    usage_info = self.api_usage[api_name]
+    
+    # Verifica se a API está em cooldown após erro 429
+    if now < usage_info["cooldown_until"]:
+        return False
+    
+    # Remove timestamps mais antigos que 60 segundos
+    usage_info["requests"] = [t for t in usage_info["requests"] if now - t < 60]
+    
+    # Verifica se ainda há capacidade disponível
+    adjusted_limit = usage_info["adjusted_limit"]
+    current_usage = len(usage_info["requests"])
+    
+    return current_usage < adjusted_limit
+```
+
+### 4. Fator de Segurança para Limites de API
+
+Foi adicionado um fator de segurança para evitar atingir o limite exato das APIs:
+
+```python
+# Aplica fator de segurança para evitar atingir o limite exato
+adjusted_limit = int(api.requests_per_minute * API_RATE_LIMIT_SAFETY_FACTOR)
+```
+
+### 5. Período de Cooldown Após Erro de Limite Excedido
+
+Quando uma API retorna erro de limite excedido (429), ela é colocada em cooldown por um período definido:
+
+```python
+# Marca uma API como tendo atingido seu limite de requisições
+def mark_api_rate_limited(self, api_name: str) -> None:
+    now = time.time()
+    self.api_usage[api_name]["cooldown_until"] = now + API_COOLDOWN_AFTER_RATE_LIMIT
+```
+
+### 6. Limitação da Concorrência Máxima
+
+O número máximo de CNPJs em processamento simultâneo foi reduzido para evitar picos de requisições:
 
 ```python
 # Limita o número de CNPJs em processamento simultâneo
-# Mantém exatamente o número total de requisições por minuto em processamento
-# para garantir que estamos processando na taxa máxima permitida
-max_processing = TOTAL_REQUESTS_PER_MINUTE
+# Usa o valor configurado de MAX_CONCURRENT_PROCESSING para evitar sobrecarga
+if processing_count >= MAX_CONCURRENT_PROCESSING:
+    logger.debug(f"Já existem {processing_count} CNPJs em processamento (limite: {MAX_CONCURRENT_PROCESSING}). Aguardando...")
+    await asyncio.sleep(min_interval_seconds)
+    continue
 ```
 
-### 4. Limpeza de Variáveis de Ambiente
+### 7. Limpeza de Variáveis de Ambiente
 
 Foram removidas variáveis de ambiente não relacionadas à aplicação que poderiam estar causando confusão.
 
-### 5. Script de Deploy Aprimorado
+### 8. Script de Deploy Aprimorado
 
 O script de deploy foi atualizado para:
 
@@ -86,7 +132,7 @@ O script de deploy foi atualizado para:
 - Verificar e configurar corretamente as variáveis de ambiente no Heroku
 - Reiniciar a fila de processamento após o deploy
 
-### 6. Scripts de Monitoramento
+### 9. Scripts de Monitoramento
 
 Foram adicionados scripts para:
 
@@ -123,6 +169,7 @@ Para verificar se as otimizações estão funcionando corretamente:
 Para garantir o funcionamento correto da fila otimizada, as seguintes variáveis de ambiente devem estar configuradas:
 
 ```
+# Configuração das APIs
 RECEITAWS_ENABLED=True
 CNPJWS_ENABLED=True
 CNPJA_OPEN_ENABLED=True
@@ -130,6 +177,11 @@ RECEITAWS_REQUESTS_PER_MINUTE=3
 CNPJWS_REQUESTS_PER_MINUTE=3
 CNPJA_OPEN_REQUESTS_PER_MINUTE=5
 REQUESTS_PER_MINUTE=11  # Deve ser igual à soma das taxas individuais
+
+# Configuração de controle de taxa
+MAX_CONCURRENT_PROCESSING=6  # Limita o número de CNPJs em processamento simultâneo
+API_COOLDOWN_AFTER_RATE_LIMIT=30  # Tempo de cooldown em segundos após erro 429
+API_RATE_LIMIT_SAFETY_FACTOR=0.9  # Fator de segurança para evitar atingir o limite exato
 ```
 
 ## Manutenção

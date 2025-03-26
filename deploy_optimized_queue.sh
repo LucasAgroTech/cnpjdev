@@ -101,6 +101,28 @@ else
     echo -e "${GREEN}A variável REQUESTS_PER_MINUTE já está configurada corretamente como $total_rpm.${NC}"
 fi
 
+# Verifica as novas variáveis de ambiente de controle de taxa
+echo -e "${YELLOW}Verificando configuração das variáveis de ambiente de controle de taxa...${NC}"
+
+max_concurrent=$(heroku config:get MAX_CONCURRENT_PROCESSING || echo "")
+api_cooldown=$(heroku config:get API_COOLDOWN_AFTER_RATE_LIMIT || echo "")
+api_safety_factor=$(heroku config:get API_RATE_LIMIT_SAFETY_FACTOR || echo "")
+
+if [ "$max_concurrent" != "6" ] || [ "$api_cooldown" != "30" ] || [ "$api_safety_factor" != "0.9" ]; then
+    echo -e "${YELLOW}As variáveis de controle de taxa podem não estar configuradas corretamente:${NC}"
+    echo -e "  MAX_CONCURRENT_PROCESSING=$max_concurrent (esperado: 6)"
+    echo -e "  API_COOLDOWN_AFTER_RATE_LIMIT=$api_cooldown (esperado: 30)"
+    echo -e "  API_RATE_LIMIT_SAFETY_FACTOR=$api_safety_factor (esperado: 0.9)"
+    echo -e "${YELLOW}Deseja configurá-las agora? (s/n)${NC}"
+    read -r resposta
+    if [[ "$resposta" == "s" ]]; then
+        heroku config:set MAX_CONCURRENT_PROCESSING=6 API_COOLDOWN_AFTER_RATE_LIMIT=30 API_RATE_LIMIT_SAFETY_FACTOR=0.9
+        echo -e "${GREEN}Variáveis de controle de taxa configuradas corretamente.${NC}"
+    fi
+else
+    echo -e "${GREEN}Variáveis de controle de taxa já estão configuradas corretamente.${NC}"
+fi
+
 # Verifica as demais variáveis de ambiente relacionadas às APIs
 echo -e "${YELLOW}Verificando configuração das variáveis de ambiente das APIs...${NC}"
 

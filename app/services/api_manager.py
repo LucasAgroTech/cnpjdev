@@ -8,6 +8,7 @@ from collections import defaultdict
 from app.services.receitaws import ReceitaWSClient
 from app.services.cnpjws import CNPJWSClient
 from app.services.cnpja_open import CNPJaOpenClient
+from app.config import API_COOLDOWN_AFTER_RATE_LIMIT, API_RATE_LIMIT_SAFETY_FACTOR
 
 logger = logging.getLogger(__name__)
 
@@ -74,22 +75,89 @@ class APIManager:
         # Rastreamento de uso de APIs para distribuição inteligente
         self.api_usage = {}
         for api, name in zip(self.apis, self.api_names):
+            # Aplica fator de segurança para evitar atingir o limite exato
+            adjusted_limit = int(api.requests_per_minute * API_RATE_LIMIT_SAFETY_FACTOR)
+            if adjusted_limit < 1:
+                adjusted_limit = 1
+                
             self.api_usage[name] = {
                 "limit": api.requests_per_minute,
+                "adjusted_limit": adjusted_limit,
                 "last_used": 0,
-                "usage_count": 0
+                "usage_count": 0,
+                "cooldown_until": 0,  # Timestamp até quando a API deve ser evitada após erro 429
+                "requests": []  # Lista de timestamps das últimas requisições
             }
             
         if not self.apis:
             raise ValueError("Pelo menos uma API deve estar habilitada")
             
         logger.info(f"Gerenciador de APIs inicializado com {len(self.apis)} APIs: {', '.join(self.api_names)}")
+        logger.info(f"Fator de segurança para limites de API: {API_RATE_LIMIT_SAFETY_FACTOR}")
+    
+    def can_use_api(self, api_name: str) -> bool:
+        """
+        Verifica se uma API pode ser usada no momento, considerando seu histórico
+        de uso recente e se está em período de cooldown após erro 429.
+        
+        Args:
+            api_name: Nome da API a verificar
+            
+        Returns:
+            True se a API pode ser usada, False caso contrário
+        """
+        now = time.time()
+        usage_info = self.api_usage[api_name]
+        
+        # Verifica se a API está em cooldown após erro 429
+        if now < usage_info["cooldown_until"]:
+            cooldown_remaining = int(usage_info["cooldown_until"] - now)
+            logger.debug(f"API {api_name} em cooldown por mais {cooldown_remaining}s após erro 429")
+            return False
+        
+        # Remove timestamps mais antigos que 60 segundos
+        usage_info["requests"] = [t for t in usage_info["requests"] if now - t < 60]
+        
+        # Verifica se ainda há capacidade disponível
+        adjusted_limit = usage_info["adjusted_limit"]
+        current_usage = len(usage_info["requests"])
+        
+        can_use = current_usage < adjusted_limit
+        
+        if not can_use:
+            logger.debug(f"API {api_name} atingiu limite ajustado de {adjusted_limit} req/min (atual: {current_usage})")
+        
+        return can_use
+    
+    def mark_api_used(self, api_name: str) -> None:
+        """
+        Marca uma API como usada, registrando o timestamp atual
+        
+        Args:
+            api_name: Nome da API usada
+        """
+        now = time.time()
+        self.api_usage[api_name]["requests"].append(now)
+        self.api_usage[api_name]["last_used"] = now
+        self.api_usage[api_name]["usage_count"] += 1
+    
+    def mark_api_rate_limited(self, api_name: str) -> None:
+        """
+        Marca uma API como tendo atingido seu limite de requisições,
+        colocando-a em cooldown por um período definido
+        
+        Args:
+            api_name: Nome da API que atingiu o limite
+        """
+        now = time.time()
+        self.api_usage[api_name]["cooldown_until"] = now + API_COOLDOWN_AFTER_RATE_LIMIT
+        logger.warning(f"API {api_name} marcada como rate limited, em cooldown por {API_COOLDOWN_AFTER_RATE_LIMIT}s")
     
     async def query_cnpj(self, cnpj: str, include_simples: bool = True) -> Tuple[Dict[str, Any], str]:
         """
         Consulta informações sobre um CNPJ usando uma das APIs disponíveis
         
-        Tenta cada API em ordem aleatória até obter sucesso ou esgotar todas as opções.
+        Tenta cada API em ordem de disponibilidade até obter sucesso ou esgotar todas as opções.
         
         Args:
             cnpj: CNPJ a consultar
@@ -111,19 +179,30 @@ class APIManager:
         
         # Tenta cada API até obter sucesso
         for api, api_name in apis_to_try:
+            # Verifica se a API pode ser usada no momento
+            if not self.can_use_api(api_name):
+                logger.info(f"Pulando API {api_name} para CNPJ {cnpj_clean} devido a controle de taxa")
+                continue
+                
             try:
                 logger.info(f"Tentando consultar CNPJ {cnpj_clean} usando API {api_name}")
-                result = await api.query_cnpj(cnpj_clean, include_simples)
                 
-                # Atualiza o rastreamento de uso da API
-                now = time.time()
-                self.api_usage[api_name]["last_used"] = now
-                self.api_usage[api_name]["usage_count"] += 1
+                # Marca a API como usada antes de fazer a requisição
+                self.mark_api_used(api_name)
+                
+                # Faz a requisição
+                result = await api.query_cnpj(cnpj_clean, include_simples)
                 
                 logger.info(f"CNPJ {cnpj_clean} consultado com sucesso usando API {api_name}")
                 return result, api_name
             except Exception as e:
-                logger.warning(f"Erro ao consultar CNPJ {cnpj_clean} usando API {api_name}: {str(e)}")
+                error_str = str(e)
+                logger.warning(f"Erro ao consultar CNPJ {cnpj_clean} usando API {api_name}: {error_str}")
+                
+                # Verifica se é um erro de limite de requisições
+                if "Limite de requisições excedido" in error_str or "429" in error_str:
+                    self.mark_api_rate_limited(api_name)
+                
                 last_error = e
                 # Continua para a próxima API
                 continue
