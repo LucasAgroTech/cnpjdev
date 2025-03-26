@@ -1437,8 +1437,8 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // URL corrigida sem o /admin duplicado
-                        const response = await fetch('/api/admin/queue/reset-errors', {
+                        // URL com o /admin duplicado conforme configuração do servidor
+                        const response = await fetch('/api/admin/admin/queue/reset-errors', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -1476,7 +1476,7 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        const response = await fetch('/api/admin/queue/reset-rate-limited', {
+                        const response = await fetch('/api/admin/admin/queue/reset-rate-limited', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
