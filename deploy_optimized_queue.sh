@@ -41,14 +41,19 @@ fi
 echo -e "${YELLOW}Adicionando arquivos modificados ao git...${NC}"
 git add app/services/queue.py app/services/api_manager.py app/services/token_bucket.py app/services/adaptive_rate_limiter.py app/config.py restart_optimized_queue.py check_queue_status.py OTIMIZACAO_FILA.md deploy_optimized_queue.sh
 
-# Commit das alterações
-echo -e "${YELLOW}Realizando commit das alterações...${NC}"
-git commit -m "Implementação do sistema de Token Bucket adaptativo para controle de taxa de APIs"
-
-# Verifica se o commit foi bem-sucedido
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Erro ao realizar commit das alterações.${NC}"
-    exit 1
+# Commit das alterações se houver algo para commitar
+echo -e "${YELLOW}Verificando se há alterações para commitar...${NC}"
+if git diff-index --quiet HEAD --; then
+    echo -e "${YELLOW}Não há alterações para commitar. Continuando com o deploy...${NC}"
+else
+    echo -e "${YELLOW}Realizando commit das alterações...${NC}"
+    git commit -m "Implementação do sistema de Token Bucket adaptativo para controle de taxa de APIs"
+    
+    # Verifica se o commit foi bem-sucedido
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Erro ao realizar commit das alterações.${NC}"
+        exit 1
+    fi
 fi
 
 # Implanta no Heroku
