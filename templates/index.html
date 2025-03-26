@@ -1407,23 +1407,38 @@
             // Inicia atualização automática
             scheduleNextUpdate();
             
+            // Cria um container para os botões de ação
+            const actionButtonsContainer = document.createElement('div');
+            actionButtonsContainer.className = 'd-flex gap-2 mt-3';
+            
             // Botão para resetar CNPJs com erro
             const resetErrorsBtn = document.createElement('button');
             resetErrorsBtn.id = 'reset-errors-btn';
-            resetErrorsBtn.className = 'btn btn-sm btn-outline-danger mt-3';
+            resetErrorsBtn.className = 'btn btn-sm btn-outline-danger';
             resetErrorsBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR FALHAS';
             
-            // Adiciona o botão abaixo da tabela
-            document.querySelector('.cnpj-list').after(resetErrorsBtn);
+            // Botão para resetar CNPJs com limite excedido
+            const resetRateLimitedBtn = document.createElement('button');
+            resetRateLimitedBtn.id = 'reset-rate-limited-btn';
+            resetRateLimitedBtn.className = 'btn btn-sm btn-outline-warning';
+            resetRateLimitedBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR LIMITE EXCEDIDO';
             
+            // Adiciona os botões ao container
+            actionButtonsContainer.appendChild(resetErrorsBtn);
+            actionButtonsContainer.appendChild(resetRateLimitedBtn);
+            
+            // Adiciona o container abaixo da tabela
+            document.querySelector('.cnpj-list').after(actionButtonsContainer);
+            
+            // Configura o botão de resetar falhas
             resetErrorsBtn.addEventListener('click', async function() {
                 try {
                     if (confirm('Tem certeza que deseja reiniciar o processamento dos CNPJs com falha?')) {
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Use the full URL path with the correct admin prefix
-                        const response = await fetch('/api/admin/admin/queue/reset-errors', {
+                        // URL corrigida sem o /admin duplicado
+                        const response = await fetch('/api/admin/queue/reset-errors', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -1451,6 +1466,44 @@
                 } finally {
                     this.disabled = false;
                     this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR FALHAS';
+                }
+            });
+            
+            // Configura o botão de resetar limite excedido
+            resetRateLimitedBtn.addEventListener('click', async function() {
+                try {
+                    if (confirm('Tem certeza que deseja reiniciar o processamento dos CNPJs com limite de requisições excedido?')) {
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
+                        
+                        const response = await fetch('/api/admin/queue/reset-rate-limited', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        if (result.count > 0) {
+                            alert(`Reinicialização concluída! ${result.count} CNPJs com limite excedido foram recolocados na fila.`);
+                        } else {
+                            alert('Nenhum CNPJ com limite excedido foi encontrado para reiniciar.');
+                        }
+                        
+                        // Atualiza o status após resetar
+                        await updateStatus(true);
+                    }
+                } catch (error) {
+                    console.error('Erro ao resetar CNPJs com limite excedido:', error);
+                    alert(`Erro ao reiniciar CNPJs com limite excedido: ${error.message}`);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR LIMITE EXCEDIDO';
                 }
             });
             
