@@ -20,105 +20,123 @@ No entanto, o sistema não estava distribuindo corretamente as requisições ent
 
 ## Otimizações Implementadas
 
-### 1. Cálculo Correto do Intervalo Entre Requisições
+### 1. Sistema de Token Bucket Adaptativo
 
-Agora o sistema calcula o intervalo entre requisições com base na soma das taxas individuais das APIs:
-
-```python
-# Soma das taxas individuais das APIs para obter a taxa total
-TOTAL_REQUESTS_PER_MINUTE = (RECEITAWS_REQUESTS_PER_MINUTE + 
-                            CNPJWS_REQUESTS_PER_MINUTE + 
-                            CNPJA_OPEN_REQUESTS_PER_MINUTE)
-
-# Intervalo exato entre requisições para atingir a taxa total desejada
-EXACT_INTERVAL_SECONDS = 60.0 / TOTAL_REQUESTS_PER_MINUTE
-```
-
-### 2. Distribuição Inteligente Entre APIs
-
-O algoritmo de distribuição de requisições entre as APIs foi aprimorado para:
-
-- Priorizar APIs que não foram usadas recentemente
-- Considerar o tempo decorrido desde o último uso de cada API
-- Adicionar um pequeno fator aleatório para evitar que todas as APIs com o mesmo tempo desde o último uso tenham exatamente a mesma pontuação
+Foi implementado um sistema de Token Bucket adaptativo para cada API, garantindo um controle de taxa preciso e eficiente:
 
 ```python
-# Calcula o tempo desde o último uso em segundos
-time_since_last_use = now - last_used if last_used > 0 else float('inf')
-
-# Se a API não foi usada recentemente (mais de 60 segundos), ela tem prioridade máxima
-if time_since_last_use > 60:
-    score = limit * 2  # Pontuação máxima com bônus para APIs não usadas recentemente
-else:
-    # Calcula a capacidade disponível com base no tempo desde o último uso
-    # Quanto mais tempo passou desde o último uso, maior a capacidade disponível
-    time_factor = min(1.0, time_since_last_use / 60.0)
+class TokenBucket:
+    """
+    Implementação do algoritmo Token Bucket para controle de taxa de requisições.
     
-    # Adiciona um pequeno fator aleatório para evitar que todas as APIs com o mesmo
-    # tempo desde o último uso tenham exatamente a mesma pontuação
-    random_factor = 0.1 * random.random()
+    O Token Bucket é um algoritmo usado para controlar a taxa na qual um processo
+    pode consumir recursos. Neste caso, é usado para controlar a taxa de requisições
+    para uma API específica.
     
-    # Calcula a pontuação final
-    available_capacity = limit * time_factor
-    score = available_capacity + random_factor
+    Cada bucket é preenchido com tokens a uma taxa constante (refill_rate).
+    Quando uma requisição é feita, um token é consumido do bucket.
+    Se não houver tokens disponíveis, a requisição é rejeitada.
+    """
 ```
 
-### 3. Controle Rigoroso de Taxa por API Individual
+Este sistema oferece várias vantagens:
 
-Foi implementado um controle de taxa rigoroso para cada API individualmente, garantindo que os limites não sejam excedidos:
+- **Garantia matemática** de não exceder os limites de cada API
+- **Distribuição suave** das requisições ao longo do tempo
+- **Adaptação dinâmica** às condições de cada API
+- **Monitoramento detalhado** do uso de cada API
+
+### 2. Escalonador Central Adaptativo
+
+Um escalonador central gerencia todas as APIs e seleciona a melhor para cada requisição:
 
 ```python
-# Verifica se uma API pode ser usada no momento
-def can_use_api(self, api_name: str) -> bool:
-    now = time.time()
-    usage_info = self.api_usage[api_name]
-    
-    # Verifica se a API está em cooldown após erro 429
-    if now < usage_info["cooldown_until"]:
-        return False
-    
-    # Remove timestamps mais antigos que 60 segundos
-    usage_info["requests"] = [t for t in usage_info["requests"] if now - t < 60]
-    
-    # Verifica se ainda há capacidade disponível
-    adjusted_limit = usage_info["adjusted_limit"]
-    current_usage = len(usage_info["requests"])
-    
-    return current_usage < adjusted_limit
+def get_best_api(self) -> Optional[str]:
+    """
+    Seleciona a melhor API para usar no momento, com base na disponibilidade
+    e no histórico de uso.
+    """
 ```
 
-### 4. Fator de Segurança para Limites de API
+O escalonador considera múltiplos fatores para selecionar a API:
 
-Foi adicionado um fator de segurança para evitar atingir o limite exato das APIs:
+- Número de tokens disponíveis
+- Tempo desde o último uso
+- Histórico de erros
+- Fator aleatório para evitar concentração
+
+### 3. Fatores de Segurança Dinâmicos
+
+Os fatores de segurança são ajustados dinamicamente com base no desempenho de cada API:
 
 ```python
-# Aplica fator de segurança para evitar atingir o limite exato
-adjusted_limit = int(api.requests_per_minute * API_RATE_LIMIT_SAFETY_FACTOR)
+# Determina o fator de segurança inicial
+if initial_safety_factor is None:
+    # Se a API tem um limite baixo, usa um fator de segurança mais conservador
+    if requests_per_minute <= API_RATE_LIMIT_THRESHOLD:
+        safety_factor = API_RATE_LIMIT_SAFETY_FACTOR_LOW
+    else:
+        safety_factor = API_RATE_LIMIT_SAFETY_FACTOR_HIGH
 ```
 
-### 5. Período de Cooldown Após Erro de Limite Excedido
+Além disso, o sistema ajusta automaticamente os fatores de segurança:
 
-Quando uma API retorna erro de limite excedido (429), ela é colocada em cooldown por um período definido:
+- **Redução após erros**: Quando uma API retorna erro de limite excedido, seu fator de segurança é reduzido
+- **Aumento gradual após sucesso**: Após várias requisições bem-sucedidas, o fator é aumentado gradualmente
+
+### 4. Sistema de Backoff Exponencial para Cooldown
+
+Quando uma API atinge seu limite, é implementado um sistema de backoff exponencial:
 
 ```python
-# Marca uma API como tendo atingido seu limite de requisições
-def mark_api_rate_limited(self, api_name: str) -> None:
-    now = time.time()
-    self.api_usage[api_name]["cooldown_until"] = now + API_COOLDOWN_AFTER_RATE_LIMIT
+# Calcula o tempo de cooldown com base no número de erros
+# Usa backoff exponencial com limite máximo
+error_count = self.api_info[api_name]["error_count"]
+cooldown_time = min(API_COOLDOWN_AFTER_RATE_LIMIT * (2 ** (error_count - 1)), API_COOLDOWN_MAX)
 ```
 
-### 6. Limitação da Concorrência Máxima
+Isso significa que:
+- Primeiro erro: cooldown de 60 segundos
+- Segundo erro: cooldown de 120 segundos
+- Terceiro erro: cooldown de 240 segundos
+- E assim por diante, até o limite máximo configurado
 
-O número máximo de CNPJs em processamento simultâneo foi reduzido para evitar picos de requisições:
+### 5. Espera Inteligente por API Disponível
+
+O sistema calcula precisamente quanto tempo esperar até que uma API esteja disponível:
 
 ```python
-# Limita o número de CNPJs em processamento simultâneo
-# Usa o valor configurado de MAX_CONCURRENT_PROCESSING para evitar sobrecarga
-if processing_count >= MAX_CONCURRENT_PROCESSING:
-    logger.debug(f"Já existem {processing_count} CNPJs em processamento (limite: {MAX_CONCURRENT_PROCESSING}). Aguardando...")
-    await asyncio.sleep(min_interval_seconds)
-    continue
+async def wait_for_api_availability(self, timeout: float = 30.0) -> Optional[str]:
+    """
+    Aguarda até que uma API esteja disponível para uso, com timeout.
+    """
 ```
+
+Isso permite:
+- Minimizar o tempo de espera
+- Evitar verificações desnecessárias
+- Garantir que a próxima requisição seja feita exatamente quando uma API estiver disponível
+
+### 6. Monitoramento Detalhado
+
+O sistema mantém estatísticas detalhadas sobre o uso de cada API:
+
+```python
+# Estatísticas
+self.stats = {
+    "requests_allowed": 0,
+    "requests_rejected": 0,
+    "total_tokens_consumed": 0,
+    "last_allowed": 0,
+    "last_rejected": 0,
+    "error_count": 0
+}
+```
+
+Estas estatísticas são usadas para:
+- Ajustar os fatores de segurança
+- Identificar problemas com APIs específicas
+- Otimizar a distribuição de requisições
 
 ### 7. Limpeza de Variáveis de Ambiente
 
@@ -179,9 +197,13 @@ CNPJA_OPEN_REQUESTS_PER_MINUTE=5
 REQUESTS_PER_MINUTE=11  # Deve ser igual à soma das taxas individuais
 
 # Configuração de controle de taxa
-MAX_CONCURRENT_PROCESSING=6  # Limita o número de CNPJs em processamento simultâneo
-API_COOLDOWN_AFTER_RATE_LIMIT=30  # Tempo de cooldown em segundos após erro 429
-API_RATE_LIMIT_SAFETY_FACTOR=0.9  # Fator de segurança para evitar atingir o limite exato
+MAX_CONCURRENT_PROCESSING=4  # Limita o número de CNPJs em processamento simultâneo
+API_COOLDOWN_AFTER_RATE_LIMIT=60  # Tempo base de cooldown em segundos após erro 429
+API_COOLDOWN_MAX=300  # Tempo máximo de cooldown em segundos
+API_RATE_LIMIT_SAFETY_FACTOR=0.9  # Fator de segurança padrão (mantido para compatibilidade)
+API_RATE_LIMIT_SAFETY_FACTOR_LOW=0.7  # Fator de segurança para APIs com limite baixo
+API_RATE_LIMIT_SAFETY_FACTOR_HIGH=0.8  # Fator de segurança para APIs com limite alto
+API_RATE_LIMIT_THRESHOLD=3  # Limite que define o que é uma API com limite "baixo"
 ```
 
 ## Manutenção

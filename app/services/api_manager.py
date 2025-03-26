@@ -1,14 +1,18 @@
 import logging
-import random
 import time
 from typing import Dict, List, Optional, Any, Tuple
 import asyncio
-from collections import defaultdict
 
 from app.services.receitaws import ReceitaWSClient
 from app.services.cnpjws import CNPJWSClient
 from app.services.cnpja_open import CNPJaOpenClient
-from app.config import API_COOLDOWN_AFTER_RATE_LIMIT, API_RATE_LIMIT_SAFETY_FACTOR
+from app.services.adaptive_rate_limiter import AdaptiveRateLimiter
+from app.config import (
+    API_RATE_LIMIT_SAFETY_FACTOR,
+    API_RATE_LIMIT_SAFETY_FACTOR_LOW,
+    API_RATE_LIMIT_SAFETY_FACTOR_HIGH,
+    API_RATE_LIMIT_THRESHOLD
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +23,9 @@ class APIManager:
     Gerencia múltiplas APIs para consulta de CNPJ, distribuindo as requisições
     entre elas para maximizar o número de consultas por minuto.
     
-    Implementa estratégia de distribuição inteligente para garantir que cada API
-    seja utilizada até seu limite máximo, priorizando as APIs com maior capacidade
-    disponível no momento.
+    Implementa um sistema de controle de taxa adaptativo baseado em Token Bucket
+    para garantir que os limites individuais das APIs sejam respeitados enquanto
+    maximiza o throughput total.
     """
     
     def __init__(
@@ -46,12 +50,24 @@ class APIManager:
         """
         self.apis = []
         self.api_names = []
+        self.api_map = {}  # Mapeamento de nome para instância da API
+        
+        # Inicializa o gerenciador de limites de taxa adaptativo
+        self.rate_limiter = AdaptiveRateLimiter()
         
         # Inicializa os clientes de API habilitados
         if receitaws_enabled:
             self.receitaws_client = ReceitaWSClient(requests_per_minute=receitaws_requests_per_minute)
             self.apis.append(self.receitaws_client)
             self.api_names.append("ReceitaWS")
+            self.api_map["ReceitaWS"] = self.receitaws_client
+            
+            # Registra a API no gerenciador de limites de taxa
+            self.rate_limiter.register_api(
+                "ReceitaWS", 
+                receitaws_requests_per_minute
+            )
+            
             logger.info(f"API ReceitaWS habilitada com {receitaws_requests_per_minute} req/min")
         else:
             self.receitaws_client = None
@@ -60,6 +76,14 @@ class APIManager:
             self.cnpjws_client = CNPJWSClient(requests_per_minute=cnpjws_requests_per_minute)
             self.apis.append(self.cnpjws_client)
             self.api_names.append("CNPJ.ws")
+            self.api_map["CNPJ.ws"] = self.cnpjws_client
+            
+            # Registra a API no gerenciador de limites de taxa
+            self.rate_limiter.register_api(
+                "CNPJ.ws", 
+                cnpjws_requests_per_minute
+            )
+            
             logger.info(f"API CNPJ.ws habilitada com {cnpjws_requests_per_minute} req/min")
         else:
             self.cnpjws_client = None
@@ -68,37 +92,27 @@ class APIManager:
             self.cnpja_open_client = CNPJaOpenClient(requests_per_minute=cnpja_open_requests_per_minute)
             self.apis.append(self.cnpja_open_client)
             self.api_names.append("CNPJa Open")
+            self.api_map["CNPJa Open"] = self.cnpja_open_client
+            
+            # Registra a API no gerenciador de limites de taxa
+            self.rate_limiter.register_api(
+                "CNPJa Open", 
+                cnpja_open_requests_per_minute
+            )
+            
             logger.info(f"API CNPJa Open habilitada com {cnpja_open_requests_per_minute} req/min")
         else:
             self.cnpja_open_client = None
-            
-        # Rastreamento de uso de APIs para distribuição inteligente
-        self.api_usage = {}
-        for api, name in zip(self.apis, self.api_names):
-            # Aplica fator de segurança para evitar atingir o limite exato
-            adjusted_limit = int(api.requests_per_minute * API_RATE_LIMIT_SAFETY_FACTOR)
-            if adjusted_limit < 1:
-                adjusted_limit = 1
-                
-            self.api_usage[name] = {
-                "limit": api.requests_per_minute,
-                "adjusted_limit": adjusted_limit,
-                "last_used": 0,
-                "usage_count": 0,
-                "cooldown_until": 0,  # Timestamp até quando a API deve ser evitada após erro 429
-                "requests": []  # Lista de timestamps das últimas requisições
-            }
             
         if not self.apis:
             raise ValueError("Pelo menos uma API deve estar habilitada")
             
         logger.info(f"Gerenciador de APIs inicializado com {len(self.apis)} APIs: {', '.join(self.api_names)}")
-        logger.info(f"Fator de segurança para limites de API: {API_RATE_LIMIT_SAFETY_FACTOR}")
     
     def can_use_api(self, api_name: str) -> bool:
         """
-        Verifica se uma API pode ser usada no momento, considerando seu histórico
-        de uso recente e se está em período de cooldown após erro 429.
+        Verifica se uma API pode ser usada no momento, utilizando o gerenciador
+        de limites de taxa adaptativo.
         
         Args:
             api_name: Nome da API a verificar
@@ -106,58 +120,35 @@ class APIManager:
         Returns:
             True se a API pode ser usada, False caso contrário
         """
-        now = time.time()
-        usage_info = self.api_usage[api_name]
-        
-        # Verifica se a API está em cooldown após erro 429
-        if now < usage_info["cooldown_until"]:
-            cooldown_remaining = int(usage_info["cooldown_until"] - now)
-            logger.debug(f"API {api_name} em cooldown por mais {cooldown_remaining}s após erro 429")
-            return False
-        
-        # Remove timestamps mais antigos que 60 segundos
-        usage_info["requests"] = [t for t in usage_info["requests"] if now - t < 60]
-        
-        # Verifica se ainda há capacidade disponível
-        adjusted_limit = usage_info["adjusted_limit"]
-        current_usage = len(usage_info["requests"])
-        
-        can_use = current_usage < adjusted_limit
-        
-        if not can_use:
-            logger.debug(f"API {api_name} atingiu limite ajustado de {adjusted_limit} req/min (atual: {current_usage})")
-        
-        return can_use
+        return self.rate_limiter.can_use_api(api_name)
     
-    def mark_api_used(self, api_name: str) -> None:
+    def mark_api_used(self, api_name: str, success: bool = True) -> None:
         """
-        Marca uma API como usada, registrando o timestamp atual
+        Marca uma API como usada, atualizando estatísticas no gerenciador
+        de limites de taxa adaptativo.
         
         Args:
             api_name: Nome da API usada
+            success: Se a requisição foi bem-sucedida
         """
-        now = time.time()
-        self.api_usage[api_name]["requests"].append(now)
-        self.api_usage[api_name]["last_used"] = now
-        self.api_usage[api_name]["usage_count"] += 1
+        self.rate_limiter.mark_api_used(api_name, success)
     
     def mark_api_rate_limited(self, api_name: str) -> None:
         """
         Marca uma API como tendo atingido seu limite de requisições,
-        colocando-a em cooldown por um período definido
+        colocando-a em cooldown por um período definido.
         
         Args:
             api_name: Nome da API que atingiu o limite
         """
-        now = time.time()
-        self.api_usage[api_name]["cooldown_until"] = now + API_COOLDOWN_AFTER_RATE_LIMIT
-        logger.warning(f"API {api_name} marcada como rate limited, em cooldown por {API_COOLDOWN_AFTER_RATE_LIMIT}s")
+        self.rate_limiter.mark_api_rate_limited(api_name)
     
     async def query_cnpj(self, cnpj: str, include_simples: bool = True) -> Tuple[Dict[str, Any], str]:
         """
         Consulta informações sobre um CNPJ usando uma das APIs disponíveis
         
-        Tenta cada API em ordem de disponibilidade até obter sucesso ou esgotar todas as opções.
+        Utiliza o gerenciador de limites de taxa adaptativo para selecionar a melhor API
+        disponível no momento, respeitando os limites individuais de cada API.
         
         Args:
             cnpj: CNPJ a consultar
@@ -172,20 +163,29 @@ class APIManager:
         if len(cnpj_clean) != 14:
             raise ValueError(f"CNPJ inválido: {cnpj}. Deve conter 14 dígitos numéricos.")
         
-        # Ordena as APIs por capacidade disponível (mais disponível primeiro)
-        apis_to_try = self._get_apis_by_availability()
-        
+        # Tenta até 3 vezes, com timeout de 30 segundos para cada tentativa
+        max_attempts = 3
+        attempt = 0
         last_error = None
         
-        # Tenta cada API até obter sucesso
-        for api, api_name in apis_to_try:
-            # Verifica se a API pode ser usada no momento
-            if not self.can_use_api(api_name):
-                logger.info(f"Pulando API {api_name} para CNPJ {cnpj_clean} devido a controle de taxa")
-                continue
-                
+        while attempt < max_attempts:
+            attempt += 1
+            
             try:
-                logger.info(f"Tentando consultar CNPJ {cnpj_clean} usando API {api_name}")
+                # Aguarda até que uma API esteja disponível (com timeout)
+                api_name = await self.rate_limiter.wait_for_api_availability(timeout=30.0)
+                
+                if api_name is None:
+                    logger.warning(f"Timeout aguardando API disponível para CNPJ {cnpj_clean} (tentativa {attempt}/{max_attempts})")
+                    continue
+                
+                # Obtém a instância da API
+                api = self.api_map.get(api_name)
+                if api is None:
+                    logger.error(f"API {api_name} selecionada pelo rate limiter, mas não encontrada no mapeamento")
+                    continue
+                
+                logger.info(f"Tentando consultar CNPJ {cnpj_clean} usando API {api_name} (tentativa {attempt}/{max_attempts})")
                 
                 # Marca a API como usada antes de fazer a requisição
                 self.mark_api_used(api_name)
@@ -193,70 +193,41 @@ class APIManager:
                 # Faz a requisição
                 result = await api.query_cnpj(cnpj_clean, include_simples)
                 
+                # Marca a API como usada com sucesso
+                self.mark_api_used(api_name, success=True)
+                
                 logger.info(f"CNPJ {cnpj_clean} consultado com sucesso usando API {api_name}")
                 return result, api_name
+                
             except Exception as e:
                 error_str = str(e)
                 logger.warning(f"Erro ao consultar CNPJ {cnpj_clean} usando API {api_name}: {error_str}")
                 
                 # Verifica se é um erro de limite de requisições
-                if "Limite de requisições excedido" in error_str or "429" in error_str:
+                if api_name and ("Limite de requisições excedido" in error_str or "429" in error_str):
                     self.mark_api_rate_limited(api_name)
                 
                 last_error = e
-                # Continua para a próxima API
+                # Continua para a próxima tentativa
                 continue
         
-        # Se chegou aqui, todas as APIs falharam
-        error_message = f"Todas as APIs falharam ao consultar CNPJ {cnpj_clean}"
+        # Se chegou aqui, todas as tentativas falharam
+        error_message = f"Todas as tentativas falharam ao consultar CNPJ {cnpj_clean}"
         if last_error:
             error_message += f": {str(last_error)}"
             
         logger.error(error_message)
         raise Exception(error_message)
-        
-    def _get_apis_by_availability(self) -> List[Tuple[Any, str]]:
+    
+    def get_status(self) -> Dict[str, Any]:
         """
-        Ordena as APIs por disponibilidade atual, priorizando as que têm mais
-        capacidade disponível no momento.
+        Retorna o status atual do gerenciador de APIs, incluindo informações
+        detalhadas sobre o uso de cada API e o estado do gerenciador de limites de taxa.
         
         Returns:
-            Lista de tuplas (api, api_name) ordenada por disponibilidade
+            Dicionário com informações sobre o estado atual
         """
-        now = time.time()
-        apis_with_scores = []
-        
-        for api, name in zip(self.apis, self.api_names):
-            # Calcula quantas requisições foram feitas no último minuto
-            usage_info = self.api_usage[name]
-            limit = usage_info["limit"]
-            last_used = usage_info["last_used"]
-            
-            # Calcula o tempo desde o último uso em segundos
-            time_since_last_use = now - last_used if last_used > 0 else float('inf')
-            
-            # Se a API não foi usada recentemente (mais de 60 segundos), ela tem prioridade máxima
-            if time_since_last_use > 60:
-                score = limit * 2  # Pontuação máxima com bônus para APIs não usadas recentemente
-            else:
-                # Calcula a capacidade disponível com base no tempo desde o último uso
-                # Quanto mais tempo passou desde o último uso, maior a capacidade disponível
-                time_factor = min(1.0, time_since_last_use / 60.0)
-                
-                # Adiciona um pequeno fator aleatório para evitar que todas as APIs com o mesmo
-                # tempo desde o último uso tenham exatamente a mesma pontuação
-                random_factor = 0.1 * random.random()
-                
-                # Calcula a pontuação final
-                available_capacity = limit * time_factor
-                score = available_capacity + random_factor
-                
-            logger.debug(f"API {name}: tempo desde último uso = {time_since_last_use:.1f}s, pontuação = {score:.2f}")
-            
-            apis_with_scores.append((api, name, score))
-        
-        # Ordena por pontuação (maior primeiro)
-        apis_with_scores.sort(key=lambda x: x[2], reverse=True)
-        
-        # Retorna apenas a API e o nome, sem a pontuação
-        return [(api, name) for api, name, _ in apis_with_scores]
+        return {
+            "apis_enabled": self.api_names,
+            "rate_limiter": self.rate_limiter.get_status()
+        }

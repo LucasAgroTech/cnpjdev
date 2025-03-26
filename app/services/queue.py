@@ -23,9 +23,6 @@ TOTAL_REQUESTS_PER_MINUTE = (RECEITAWS_REQUESTS_PER_MINUTE +
                             CNPJWS_REQUESTS_PER_MINUTE + 
                             CNPJA_OPEN_REQUESTS_PER_MINUTE)
 
-# Intervalo exato entre requisições para atingir a taxa total desejada
-EXACT_INTERVAL_SECONDS = 60.0 / TOTAL_REQUESTS_PER_MINUTE
-
 # Singleton para o gerenciador de fila
 _queue_instance = None
 _queue_lock = asyncio.Lock()
@@ -303,11 +300,6 @@ class CNPJQueue:
             # Contador para pausar periodicamente e permitir que outras tarefas sejam executadas
             processed_count = 0
             
-            # Calcula o intervalo exato entre requisições para atingir exatamente o limite de requisições por minuto
-            # Não adiciona tempo extra para maximizar o throughput
-            min_interval_seconds = EXACT_INTERVAL_SECONDS
-            last_process_time = 0
-            
             while not queue.empty():
                 # Limpa CNPJs presos em processamento
                 await self.cleanup_stuck_processing()
@@ -317,20 +309,10 @@ class CNPJQueue:
                 
                 # Limita o número de CNPJs em processamento simultâneo
                 # Usa o valor configurado de MAX_CONCURRENT_PROCESSING para evitar sobrecarga
-                # Este valor é menor que TOTAL_REQUESTS_PER_MINUTE para dar margem de segurança
                 if processing_count >= MAX_CONCURRENT_PROCESSING:
                     logger.debug(f"Já existem {processing_count} CNPJs em processamento (limite: {MAX_CONCURRENT_PROCESSING}). Aguardando...")
-                    await asyncio.sleep(min_interval_seconds)
+                    await asyncio.sleep(1.0)  # Aguarda 1 segundo antes de verificar novamente
                     continue
-                
-                # Respeita o intervalo mínimo entre requisições
-                current_time = time.time()
-                time_since_last_process = current_time - last_process_time
-                
-                if time_since_last_process < min_interval_seconds:
-                    wait_time = min_interval_seconds - time_since_last_process
-                    logger.debug(f"Aguardando {wait_time:.2f}s para manter exatamente {TOTAL_REQUESTS_PER_MINUTE} req/min")
-                    await asyncio.sleep(wait_time)
                 
                 # A cada 5 CNPJs processados, pausa brevemente para permitir que outras tarefas sejam executadas
                 if processed_count >= 5:

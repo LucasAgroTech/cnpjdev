@@ -83,12 +83,20 @@ async def main():
         print(f"Total de requisições por minuto: {total_rpm}")
         
         # Exibe informações sobre as configurações de controle de taxa
-        from app.config import MAX_CONCURRENT_PROCESSING, API_COOLDOWN_AFTER_RATE_LIMIT, API_RATE_LIMIT_SAFETY_FACTOR
+        from app.config import (
+            MAX_CONCURRENT_PROCESSING, API_COOLDOWN_AFTER_RATE_LIMIT, 
+            API_RATE_LIMIT_SAFETY_FACTOR, API_COOLDOWN_MAX,
+            API_RATE_LIMIT_SAFETY_FACTOR_LOW, API_RATE_LIMIT_SAFETY_FACTOR_HIGH,
+            API_RATE_LIMIT_THRESHOLD
+        )
         
         print("\nConfiguração de controle de taxa:")
         print(f"- Máximo de CNPJs em processamento simultâneo: {MAX_CONCURRENT_PROCESSING}")
         print(f"- Tempo de cooldown após erro 429: {API_COOLDOWN_AFTER_RATE_LIMIT}s")
+        print(f"- Tempo máximo de cooldown: {API_COOLDOWN_MAX}s")
         print(f"- Fator de segurança para limites de API: {API_RATE_LIMIT_SAFETY_FACTOR}")
+        print(f"- Fator de segurança baixo (APIs com limite <= {API_RATE_LIMIT_THRESHOLD}): {API_RATE_LIMIT_SAFETY_FACTOR_LOW}")
+        print(f"- Fator de segurança alto (APIs com limite > {API_RATE_LIMIT_THRESHOLD}): {API_RATE_LIMIT_SAFETY_FACTOR_HIGH}")
         
         print("\nStatus da fila:")
         
@@ -188,6 +196,47 @@ async def main():
                     print(f"- Tempo estimado para processar a fila atual: {estimated_minutes:.1f} minutos")
                 else:
                     print(f"- Tempo estimado para processar a fila atual: {estimated_hours:.1f} horas")
+        
+        # Tenta exibir informações sobre o gerenciador de limites de taxa adaptativo
+        try:
+            # Importa as classes necessárias
+            from app.services.api_manager import APIManager
+            from app.services.adaptive_rate_limiter import AdaptiveRateLimiter
+            
+            # Cria uma instância do gerenciador de APIs para obter o status
+            api_manager = APIManager(
+                receitaws_enabled=RECEITAWS_ENABLED,
+                cnpjws_enabled=CNPJWS_ENABLED,
+                cnpja_open_enabled=CNPJA_OPEN_ENABLED,
+                receitaws_requests_per_minute=RECEITAWS_REQUESTS_PER_MINUTE,
+                cnpjws_requests_per_minute=CNPJWS_REQUESTS_PER_MINUTE,
+                cnpja_open_requests_per_minute=CNPJA_OPEN_REQUESTS_PER_MINUTE
+            )
+            
+            # Obtém o status do gerenciador de limites de taxa
+            rate_limiter_status = api_manager.get_status()
+            
+            print("\nStatus do gerenciador de limites de taxa adaptativo:")
+            print(f"- APIs habilitadas: {', '.join(rate_limiter_status['apis_enabled'])}")
+            
+            # Exibe informações sobre cada API
+            for api_name, api_status in rate_limiter_status['rate_limiter']['apis'].items():
+                print(f"\n  {api_name}:")
+                print(f"  - Capacidade: {api_status['capacity']} req/min")
+                print(f"  - Capacidade efetiva: {api_status['effective_capacity']:.2f} req/min (fator de segurança: {api_status['safety_factor']:.2f})")
+                print(f"  - Tokens disponíveis: {api_status['current_tokens']:.2f}/{api_status['effective_capacity']:.2f} ({api_status['fullness_percentage']:.1f}%)")
+                
+                # Exibe informações sobre cooldown
+                cooldown_remaining = api_status['cooldown_remaining']
+                if cooldown_remaining > 0:
+                    print(f"  - Em cooldown por mais {cooldown_remaining:.1f}s")
+                
+                # Exibe estatísticas de uso
+                print(f"  - Requisições permitidas: {api_status['stats']['requests_allowed']}")
+                print(f"  - Requisições rejeitadas: {api_status['stats']['requests_rejected']}")
+                print(f"  - Erros de limite de taxa: {api_status['error_count']}")
+        except Exception as e:
+            print(f"\nNão foi possível obter informações do gerenciador de limites de taxa: {e}")
         
         print("\n===== FIM DO RELATÓRIO =====\n")
         

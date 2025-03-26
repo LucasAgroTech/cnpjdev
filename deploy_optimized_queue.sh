@@ -39,11 +39,11 @@ fi
 
 # Adiciona as alterações ao git
 echo -e "${YELLOW}Adicionando arquivos modificados ao git...${NC}"
-git add app/services/queue.py app/services/api_manager.py restart_optimized_queue.py OTIMIZACAO_FILA.md deploy_optimized_queue.sh
+git add app/services/queue.py app/services/api_manager.py app/services/token_bucket.py app/services/adaptive_rate_limiter.py app/config.py restart_optimized_queue.py check_queue_status.py OTIMIZACAO_FILA.md deploy_optimized_queue.sh
 
 # Commit das alterações
 echo -e "${YELLOW}Realizando commit das alterações...${NC}"
-git commit -m "Otimização da fila para processar exatamente 11 CNPJs por minuto"
+git commit -m "Implementação do sistema de Token Bucket adaptativo para controle de taxa de APIs"
 
 # Verifica se o commit foi bem-sucedido
 if [ $? -ne 0 ]; then
@@ -106,21 +106,35 @@ echo -e "${YELLOW}Verificando configuração das variáveis de ambiente de contr
 
 max_concurrent=$(heroku config:get MAX_CONCURRENT_PROCESSING || echo "")
 api_cooldown=$(heroku config:get API_COOLDOWN_AFTER_RATE_LIMIT || echo "")
+api_cooldown_max=$(heroku config:get API_COOLDOWN_MAX || echo "")
 api_safety_factor=$(heroku config:get API_RATE_LIMIT_SAFETY_FACTOR || echo "")
+api_safety_factor_low=$(heroku config:get API_RATE_LIMIT_SAFETY_FACTOR_LOW || echo "")
+api_safety_factor_high=$(heroku config:get API_RATE_LIMIT_SAFETY_FACTOR_HIGH || echo "")
+api_threshold=$(heroku config:get API_RATE_LIMIT_THRESHOLD || echo "")
 
-if [ "$max_concurrent" != "6" ] || [ "$api_cooldown" != "30" ] || [ "$api_safety_factor" != "0.9" ]; then
-    echo -e "${YELLOW}As variáveis de controle de taxa podem não estar configuradas corretamente:${NC}"
-    echo -e "  MAX_CONCURRENT_PROCESSING=$max_concurrent (esperado: 6)"
-    echo -e "  API_COOLDOWN_AFTER_RATE_LIMIT=$api_cooldown (esperado: 30)"
-    echo -e "  API_RATE_LIMIT_SAFETY_FACTOR=$api_safety_factor (esperado: 0.9)"
-    echo -e "${YELLOW}Deseja configurá-las agora? (s/n)${NC}"
-    read -r resposta
-    if [[ "$resposta" == "s" ]]; then
-        heroku config:set MAX_CONCURRENT_PROCESSING=6 API_COOLDOWN_AFTER_RATE_LIMIT=30 API_RATE_LIMIT_SAFETY_FACTOR=0.9
-        echo -e "${GREEN}Variáveis de controle de taxa configuradas corretamente.${NC}"
-    fi
+echo -e "${YELLOW}Variáveis de controle de taxa atuais:${NC}"
+echo -e "  MAX_CONCURRENT_PROCESSING=$max_concurrent (esperado: 4)"
+echo -e "  API_COOLDOWN_AFTER_RATE_LIMIT=$api_cooldown (esperado: 60)"
+echo -e "  API_COOLDOWN_MAX=$api_cooldown_max (esperado: 300)"
+echo -e "  API_RATE_LIMIT_SAFETY_FACTOR=$api_safety_factor (esperado: 0.9)"
+echo -e "  API_RATE_LIMIT_SAFETY_FACTOR_LOW=$api_safety_factor_low (esperado: 0.7)"
+echo -e "  API_RATE_LIMIT_SAFETY_FACTOR_HIGH=$api_safety_factor_high (esperado: 0.8)"
+echo -e "  API_RATE_LIMIT_THRESHOLD=$api_threshold (esperado: 3)"
+
+echo -e "${YELLOW}Deseja configurar todas as variáveis de controle de taxa com os valores recomendados? (s/n)${NC}"
+read -r resposta
+if [[ "$resposta" == "s" ]]; then
+    heroku config:set \
+        MAX_CONCURRENT_PROCESSING=4 \
+        API_COOLDOWN_AFTER_RATE_LIMIT=60 \
+        API_COOLDOWN_MAX=300 \
+        API_RATE_LIMIT_SAFETY_FACTOR=0.9 \
+        API_RATE_LIMIT_SAFETY_FACTOR_LOW=0.7 \
+        API_RATE_LIMIT_SAFETY_FACTOR_HIGH=0.8 \
+        API_RATE_LIMIT_THRESHOLD=3
+    echo -e "${GREEN}Variáveis de controle de taxa configuradas corretamente.${NC}"
 else
-    echo -e "${GREEN}Variáveis de controle de taxa já estão configuradas corretamente.${NC}"
+    echo -e "${YELLOW}As variáveis de controle de taxa não foram alteradas.${NC}"
 fi
 
 # Verifica as demais variáveis de ambiente relacionadas às APIs
@@ -190,8 +204,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo -e "${GREEN}Implantação das otimizações da fila concluída com sucesso!${NC}"
-echo -e "${GREEN}O sistema agora processará exatamente 11 CNPJs por minuto.${NC}"
+echo -e "${GREEN}Implantação do sistema de Token Bucket adaptativo concluída com sucesso!${NC}"
+echo -e "${GREEN}O sistema agora gerenciará as APIs de forma inteligente, garantindo:${NC}"
+echo -e "${GREEN}- Respeito aos limites individuais de cada API${NC}"
+echo -e "${GREEN}- Maximização do throughput total (11 CNPJs por minuto)${NC}"
+echo -e "${GREEN}- Adaptação dinâmica às condições de cada API${NC}"
+echo -e "${GREEN}- Monitoramento detalhado do uso das APIs${NC}"
 echo -e "${YELLOW}Para verificar o status da fila, execute:${NC}"
 echo -e "  heroku run python check_queue_status.py"
 echo -e "${YELLOW}Para monitorar os logs, execute:${NC}"
