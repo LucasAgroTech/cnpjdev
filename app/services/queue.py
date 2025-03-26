@@ -13,8 +13,14 @@ from app.config import MAX_RETRY_ATTEMPTS, REQUESTS_PER_MINUTE, RECEITAWS_REQUES
 
 logger = logging.getLogger(__name__)
 
-# Constante para o intervalo exato entre requisições para atingir 11 por minuto
-EXACT_INTERVAL_SECONDS = 60.0 / REQUESTS_PER_MINUTE
+# Constantes para o gerenciamento de taxa de requisições
+# Soma das taxas individuais das APIs para obter a taxa total
+TOTAL_REQUESTS_PER_MINUTE = (RECEITAWS_REQUESTS_PER_MINUTE + 
+                            CNPJWS_REQUESTS_PER_MINUTE + 
+                            CNPJA_OPEN_REQUESTS_PER_MINUTE)
+
+# Intervalo exato entre requisições para atingir a taxa total desejada
+EXACT_INTERVAL_SECONDS = 60.0 / TOTAL_REQUESTS_PER_MINUTE
 
 # Singleton para o gerenciador de fila
 _queue_instance = None
@@ -306,9 +312,9 @@ class CNPJQueue:
                 processing_count = await self.get_processing_count()
                 
                 # Limita o número de CNPJs em processamento simultâneo
-                # Mantém exatamente REQUESTS_PER_MINUTE CNPJs em processamento
+                # Mantém exatamente o número total de requisições por minuto em processamento
                 # para garantir que estamos processando na taxa máxima permitida
-                max_processing = REQUESTS_PER_MINUTE
+                max_processing = TOTAL_REQUESTS_PER_MINUTE
                 
                 if processing_count >= max_processing:
                     logger.debug(f"Já existem {processing_count} CNPJs em processamento. Aguardando...")
@@ -321,7 +327,7 @@ class CNPJQueue:
                 
                 if time_since_last_process < min_interval_seconds:
                     wait_time = min_interval_seconds - time_since_last_process
-                    logger.debug(f"Aguardando {wait_time:.2f}s para manter exatamente {REQUESTS_PER_MINUTE} req/min")
+                    logger.debug(f"Aguardando {wait_time:.2f}s para manter exatamente {TOTAL_REQUESTS_PER_MINUTE} req/min")
                     await asyncio.sleep(wait_time)
                 
                 # A cada 5 CNPJs processados, pausa brevemente para permitir que outras tarefas sejam executadas

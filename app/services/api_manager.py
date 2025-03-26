@@ -153,15 +153,26 @@ class APIManager:
             limit = usage_info["limit"]
             last_used = usage_info["last_used"]
             
-            # Se a API não foi usada recentemente, ela tem prioridade máxima
-            if last_used == 0 or now - last_used > 60:
-                score = limit  # Pontuação máxima
+            # Calcula o tempo desde o último uso em segundos
+            time_since_last_use = now - last_used if last_used > 0 else float('inf')
+            
+            # Se a API não foi usada recentemente (mais de 60 segundos), ela tem prioridade máxima
+            if time_since_last_use > 60:
+                score = limit * 2  # Pontuação máxima com bônus para APIs não usadas recentemente
             else:
                 # Calcula a capacidade disponível com base no tempo desde o último uso
-                # e no número de requisições já feitas
-                time_factor = min(1.0, (now - last_used) / 60.0)
+                # Quanto mais tempo passou desde o último uso, maior a capacidade disponível
+                time_factor = min(1.0, time_since_last_use / 60.0)
+                
+                # Adiciona um pequeno fator aleatório para evitar que todas as APIs com o mesmo
+                # tempo desde o último uso tenham exatamente a mesma pontuação
+                random_factor = 0.1 * random.random()
+                
+                # Calcula a pontuação final
                 available_capacity = limit * time_factor
-                score = available_capacity
+                score = available_capacity + random_factor
+                
+            logger.debug(f"API {name}: tempo desde último uso = {time_since_last_use:.1f}s, pontuação = {score:.2f}")
             
             apis_with_scores.append((api, name, score))
         

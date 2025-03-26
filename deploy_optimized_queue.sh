@@ -75,17 +75,30 @@ fi
 echo -e "${YELLOW}Verificando configuração da variável REQUESTS_PER_MINUTE...${NC}"
 current_rpm=$(heroku config:get REQUESTS_PER_MINUTE)
 
-if [ "$current_rpm" != "11" ]; then
-    echo -e "${YELLOW}A variável REQUESTS_PER_MINUTE não está configurada como 11. Deseja configurá-la agora? (s/n)${NC}"
+# Calcula a soma das taxas individuais das APIs
+receitaws_rpm=$(heroku config:get RECEITAWS_REQUESTS_PER_MINUTE || echo "3")
+cnpjws_rpm=$(heroku config:get CNPJWS_REQUESTS_PER_MINUTE || echo "3")
+cnpja_open_rpm=$(heroku config:get CNPJA_OPEN_REQUESTS_PER_MINUTE || echo "5")
+
+# Converte para números inteiros
+receitaws_rpm_int=$((receitaws_rpm))
+cnpjws_rpm_int=$((cnpjws_rpm))
+cnpja_open_rpm_int=$((cnpja_open_rpm))
+
+# Calcula a soma
+total_rpm=$((receitaws_rpm_int + cnpjws_rpm_int + cnpja_open_rpm_int))
+
+if [ "$current_rpm" != "$total_rpm" ]; then
+    echo -e "${YELLOW}A variável REQUESTS_PER_MINUTE não está configurada como $total_rpm (soma das taxas individuais). Deseja configurá-la agora? (s/n)${NC}"
     read -r resposta
     if [[ "$resposta" == "s" ]]; then
-        heroku config:set REQUESTS_PER_MINUTE=11
-        echo -e "${GREEN}Variável REQUESTS_PER_MINUTE configurada como 11.${NC}"
+        heroku config:set REQUESTS_PER_MINUTE=$total_rpm
+        echo -e "${GREEN}Variável REQUESTS_PER_MINUTE configurada como $total_rpm.${NC}"
     else
-        echo -e "${YELLOW}A variável REQUESTS_PER_MINUTE não foi alterada. O sistema pode não processar exatamente 11 CNPJs por minuto.${NC}"
+        echo -e "${YELLOW}A variável REQUESTS_PER_MINUTE não foi alterada. O sistema pode não processar corretamente os CNPJs.${NC}"
     fi
 else
-    echo -e "${GREEN}A variável REQUESTS_PER_MINUTE já está configurada corretamente como 11.${NC}"
+    echo -e "${GREEN}A variável REQUESTS_PER_MINUTE já está configurada corretamente como $total_rpm.${NC}"
 fi
 
 # Verifica as demais variáveis de ambiente relacionadas às APIs

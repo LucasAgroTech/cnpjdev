@@ -1,96 +1,194 @@
-import requests
-import sys
-import os
-import time
-from datetime import datetime
+#!/usr/bin/env python
+"""
+Script para verificar o status da fila de processamento de CNPJs
 
-def check_queue_status(base_url, interval=10, count=1):
+Este script exibe informações sobre o status atual da fila de processamento,
+incluindo CNPJs pendentes, em processamento, concluídos e com erro.
+"""
+
+import asyncio
+import logging
+import sys
+from sqlalchemy import create_engine, func
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta
+
+# Configura logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger("check_queue_status")
+
+# Importa as dependências necessárias
+try:
+    from app.config import DATABASE_URL
+    from app.models.database import CNPJQuery, CNPJData
+    from app.config import (
+        RECEITAWS_ENABLED, CNPJWS_ENABLED, CNPJA_OPEN_ENABLED,
+        RECEITAWS_REQUESTS_PER_MINUTE, CNPJWS_REQUESTS_PER_MINUTE, CNPJA_OPEN_REQUESTS_PER_MINUTE
+    )
+except ImportError as e:
+    logger.error(f"Erro ao importar dependências: {e}")
+    sys.exit(1)
+
+def format_time_ago(dt):
     """
-    Verifica o status da fila de CNPJs
+    Formata o tempo decorrido desde uma data/hora
     
     Args:
-        base_url: URL base da API (ex: http://localhost:8000 ou https://app-name.herokuapp.com)
-        interval: Intervalo em segundos entre verificações (padrão: 10)
-        count: Número de verificações a realizar (padrão: 1, 0 para contínuo)
+        dt: Data/hora a ser formatada
+        
+    Returns:
+        String formatada com o tempo decorrido
     """
-    url = f"{base_url}/api/admin/queue/status"
+    if not dt:
+        return "desconhecido"
+        
+    now = datetime.utcnow()
+    diff = now - dt
     
-    checks = 0
-    continuous = count == 0
+    if diff.days > 0:
+        return f"{diff.days} dias atrás"
+    elif diff.seconds >= 3600:
+        hours = diff.seconds // 3600
+        return f"{hours} horas atrás"
+    elif diff.seconds >= 60:
+        minutes = diff.seconds // 60
+        return f"{minutes} minutos atrás"
+    else:
+        return f"{diff.seconds} segundos atrás"
+
+async def main():
+    """
+    Função principal para verificar o status da fila
+    """
+    print("\n===== STATUS DA FILA DE PROCESSAMENTO DE CNPJs =====\n")
     
     try:
-        while continuous or checks < count:
-            try:
-                print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Verificando status da fila em {url}...")
-                response = requests.get(url)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    queue_status = data.get("queue_status", {})
-                    
-                    print("\n=== STATUS DA FILA ===")
-                    print(f"Na fila:      {queue_status.get('queued', 0)}")
-                    print(f"Em processo:  {queue_status.get('processing', 0)}")
-                    print(f"Concluídos:   {queue_status.get('completed', 0)}")
-                    print(f"Com erro:     {queue_status.get('error', 0)}")
-                    print(f"Total:        {queue_status.get('total', 0)}")
-                    
-                    # Mostra CNPJs pendentes recentes
-                    recent_pending = data.get("recent_pending", [])
-                    if recent_pending:
-                        print("\n=== CNPJs PENDENTES RECENTES ===")
-                        for item in recent_pending:
-                            cnpj = item.get("cnpj", "")
-                            status = item.get("status", "")
-                            updated_at = item.get("updated_at", "").replace("T", " ").split(".")[0]
-                            print(f"{cnpj} - {status} - Atualizado em: {updated_at}")
+        # Cria uma sessão do banco de dados
+        engine = create_engine(DATABASE_URL)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+        
+        # Exibe informações sobre as APIs configuradas
+        total_rpm = (RECEITAWS_REQUESTS_PER_MINUTE + 
+                     CNPJWS_REQUESTS_PER_MINUTE + 
+                     CNPJA_OPEN_REQUESTS_PER_MINUTE)
+        
+        print("Configuração das APIs:")
+        print(f"- ReceitaWS: {'habilitada' if RECEITAWS_ENABLED else 'desabilitada'} ({RECEITAWS_REQUESTS_PER_MINUTE} req/min)")
+        print(f"- CNPJ.ws: {'habilitada' if CNPJWS_ENABLED else 'desabilitada'} ({CNPJWS_REQUESTS_PER_MINUTE} req/min)")
+        print(f"- CNPJa Open: {'habilitada' if CNPJA_OPEN_ENABLED else 'desabilitada'} ({CNPJA_OPEN_REQUESTS_PER_MINUTE} req/min)")
+        print(f"Total de requisições por minuto: {total_rpm}")
+        
+        print("\nStatus da fila:")
+        
+        # Conta CNPJs por status
+        total_queued = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "queued").scalar() or 0
+        total_processing = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "processing").scalar() or 0
+        total_completed = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "completed").scalar() or 0
+        total_error = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "error").scalar() or 0
+        total_rate_limited = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "rate_limited").scalar() or 0
+        
+        total = total_queued + total_processing + total_completed + total_error + total_rate_limited
+        
+        print(f"- Na fila: {total_queued}")
+        print(f"- Em processamento: {total_processing}")
+        print(f"- Concluídos: {total_completed}")
+        print(f"- Com erro: {total_error}")
+        print(f"- Limite de requisições excedido: {total_rate_limited}")
+        print(f"- Total: {total}")
+        
+        # Verifica CNPJs presos em processamento
+        stuck_threshold = datetime.utcnow() - timedelta(minutes=3)
+        stuck_count = db.query(func.count(CNPJQuery.id)).filter(
+            CNPJQuery.status == "processing",
+            CNPJQuery.updated_at < stuck_threshold
+        ).scalar() or 0
+        
+        if stuck_count > 0:
+            print(f"\nAtenção: {stuck_count} CNPJs estão presos em processamento há mais de 3 minutos.")
+        
+        # Exibe os 5 CNPJs mais recentes em processamento
+        print("\nCNPJs em processamento (5 mais recentes):")
+        processing_queries = db.query(CNPJQuery).filter(
+            CNPJQuery.status == "processing"
+        ).order_by(CNPJQuery.updated_at.desc()).limit(5).all()
+        
+        if processing_queries:
+            for query in processing_queries:
+                time_ago = format_time_ago(query.updated_at)
+                print(f"- CNPJ: {query.cnpj}, atualizado {time_ago}")
+        else:
+            print("- Nenhum CNPJ em processamento no momento.")
+        
+        # Exibe os 5 CNPJs mais recentes na fila
+        print("\nCNPJs na fila (5 mais recentes):")
+        queued_queries = db.query(CNPJQuery).filter(
+            CNPJQuery.status == "queued"
+        ).order_by(CNPJQuery.updated_at.desc()).limit(5).all()
+        
+        if queued_queries:
+            for query in queued_queries:
+                time_ago = format_time_ago(query.updated_at)
+                print(f"- CNPJ: {query.cnpj}, adicionado {time_ago}")
+        else:
+            print("- Nenhum CNPJ na fila no momento.")
+        
+        # Exibe os 5 CNPJs mais recentes com erro
+        print("\nCNPJs com erro (5 mais recentes):")
+        error_queries = db.query(CNPJQuery).filter(
+            CNPJQuery.status == "error"
+        ).order_by(CNPJQuery.updated_at.desc()).limit(5).all()
+        
+        if error_queries:
+            for query in error_queries:
+                time_ago = format_time_ago(query.updated_at)
+                print(f"- CNPJ: {query.cnpj}, erro: {query.error_message}, ocorrido {time_ago}")
+        else:
+            print("- Nenhum CNPJ com erro no momento.")
+        
+        # Exibe estatísticas de processamento
+        print("\nEstatísticas de processamento:")
+        
+        # Calcula a taxa de processamento nas últimas 24 horas
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        completed_last_24h = db.query(func.count(CNPJQuery.id)).filter(
+            CNPJQuery.status == "completed",
+            CNPJQuery.updated_at >= yesterday
+        ).scalar() or 0
+        
+        # Calcula a taxa de processamento na última hora
+        last_hour = datetime.utcnow() - timedelta(hours=1)
+        completed_last_hour = db.query(func.count(CNPJQuery.id)).filter(
+            CNPJQuery.status == "completed",
+            CNPJQuery.updated_at >= last_hour
+        ).scalar() or 0
+        
+        print(f"- CNPJs processados nas últimas 24 horas: {completed_last_24h}")
+        print(f"- CNPJs processados na última hora: {completed_last_hour}")
+        
+        if completed_last_hour > 0:
+            print(f"- Taxa de processamento atual: {completed_last_hour} CNPJs/hora")
+            
+            # Estima o tempo para processar a fila atual
+            if total_queued > 0:
+                estimated_hours = total_queued / completed_last_hour
+                if estimated_hours < 1:
+                    estimated_minutes = estimated_hours * 60
+                    print(f"- Tempo estimado para processar a fila atual: {estimated_minutes:.1f} minutos")
                 else:
-                    print(f"Erro ao verificar status: {response.status_code}")
-                    print(response.text)
-            
-            except Exception as e:
-                print(f"Erro ao fazer requisição: {str(e)}")
-            
-            checks += 1
-            
-            if continuous or checks < count:
-                print(f"\nAguardando {interval} segundos para próxima verificação...")
-                time.sleep(interval)
-    
-    except KeyboardInterrupt:
-        print("\nVerificação interrompida pelo usuário.")
+                    print(f"- Tempo estimado para processar a fila atual: {estimated_hours:.1f} horas")
+        
+        print("\n===== FIM DO RELATÓRIO =====\n")
+        
+    except Exception as e:
+        logger.error(f"Erro ao verificar status da fila: {e}")
+        sys.exit(1)
+    finally:
+        # Fecha a sessão do banco de dados
+        db.close()
 
 if __name__ == "__main__":
-    # Processa argumentos
-    base_url = None
-    interval = 10
-    count = 1
-    
-    if len(sys.argv) > 1:
-        base_url = sys.argv[1]
-        
-        if len(sys.argv) > 2:
-            try:
-                interval = int(sys.argv[2])
-            except ValueError:
-                print(f"Intervalo inválido: {sys.argv[2]}. Usando padrão: 10 segundos.")
-        
-        if len(sys.argv) > 3:
-            try:
-                count = int(sys.argv[3])
-            except ValueError:
-                print(f"Contagem inválida: {sys.argv[3]}. Usando padrão: 1 verificação.")
-    
-    if not base_url:
-        # Tenta obter a URL do Heroku das variáveis de ambiente
-        heroku_app = os.environ.get("HEROKU_APP_NAME")
-        if heroku_app:
-            base_url = f"https://{heroku_app}.herokuapp.com"
-        else:
-            base_url = input("Digite a URL base da API (ex: http://localhost:8000 ou https://app-name.herokuapp.com): ")
-    
-    print(f"Verificando status da fila em {base_url}")
-    print(f"Intervalo: {interval} segundos")
-    print(f"Contagem: {count if count > 0 else 'contínuo'}")
-    
-    check_queue_status(base_url, interval, count)
+    asyncio.run(main())

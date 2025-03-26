@@ -1,92 +1,126 @@
-# Otimização da Fila de Consulta de CNPJs
+# Otimização da Fila de Processamento de CNPJs
 
-Este documento descreve as otimizações implementadas no sistema de consulta de CNPJs para garantir o processamento exato de 11 CNPJs por minuto, maximizando o uso das APIs disponíveis.
+Este documento descreve as otimizações implementadas na fila de processamento de CNPJs para garantir o máximo aproveitamento das APIs disponíveis.
 
-## Contexto
+## Problema Original
 
-O sistema utiliza três APIs diferentes para consulta de CNPJs, cada uma com seu próprio limite de requisições por minuto:
+O sistema utiliza três APIs diferentes para consulta de CNPJs:
 
-- ReceitaWS: 3 requisições/minuto
-- CNPJ.ws: 3 requisições/minuto
-- CNPJa Open: 5 requisições/minuto
+1. **ReceitaWS**: Limite de 3 requisições por minuto
+2. **CNPJ.ws**: Limite de 3 requisições por minuto
+3. **CNPJa Open**: Limite de 5 requisições por minuto
 
-O limite total combinado é de 11 requisições por minuto.
+Isso totaliza 11 requisições por minuto (3 + 3 + 5 = 11).
+
+No entanto, o sistema não estava distribuindo corretamente as requisições entre as APIs, o que resultava em:
+
+- Subutilização das APIs disponíveis
+- Erros de limite de taxa excedido
+- Processamento mais lento do que o possível
 
 ## Otimizações Implementadas
 
-### 1. Controle Preciso de Taxa de Requisições
+### 1. Cálculo Correto do Intervalo Entre Requisições
 
-No arquivo `app/services/queue.py`, implementamos um controle preciso do intervalo entre requisições para garantir exatamente 11 requisições por minuto:
-
-- Substituímos o cálculo do intervalo mínimo entre requisições, removendo o segundo extra de segurança que estava sendo adicionado
-- Definimos uma constante `EXACT_INTERVAL_SECONDS` que calcula o intervalo exato para atingir 11 requisições por minuto (60/11 ≈ 5.45 segundos)
-- Ajustamos o limite de processamento simultâneo para exatamente `REQUESTS_PER_MINUTE` (11) em vez de `REQUESTS_PER_MINUTE + 2`
+Agora o sistema calcula o intervalo entre requisições com base na soma das taxas individuais das APIs:
 
 ```python
-# Constante para o intervalo exato entre requisições para atingir 11 por minuto
-EXACT_INTERVAL_SECONDS = 60.0 / REQUESTS_PER_MINUTE
+# Soma das taxas individuais das APIs para obter a taxa total
+TOTAL_REQUESTS_PER_MINUTE = (RECEITAWS_REQUESTS_PER_MINUTE + 
+                            CNPJWS_REQUESTS_PER_MINUTE + 
+                            CNPJA_OPEN_REQUESTS_PER_MINUTE)
 
-# Calcula o intervalo exato entre requisições para atingir exatamente o limite de requisições por minuto
-# Não adiciona tempo extra para maximizar o throughput
-min_interval_seconds = EXACT_INTERVAL_SECONDS
+# Intervalo exato entre requisições para atingir a taxa total desejada
+EXACT_INTERVAL_SECONDS = 60.0 / TOTAL_REQUESTS_PER_MINUTE
+```
 
+### 2. Distribuição Inteligente Entre APIs
+
+O algoritmo de distribuição de requisições entre as APIs foi aprimorado para:
+
+- Priorizar APIs que não foram usadas recentemente
+- Considerar o tempo decorrido desde o último uso de cada API
+- Adicionar um pequeno fator aleatório para evitar que todas as APIs com o mesmo tempo desde o último uso tenham exatamente a mesma pontuação
+
+```python
+# Calcula o tempo desde o último uso em segundos
+time_since_last_use = now - last_used if last_used > 0 else float('inf')
+
+# Se a API não foi usada recentemente (mais de 60 segundos), ela tem prioridade máxima
+if time_since_last_use > 60:
+    score = limit * 2  # Pontuação máxima com bônus para APIs não usadas recentemente
+else:
+    # Calcula a capacidade disponível com base no tempo desde o último uso
+    # Quanto mais tempo passou desde o último uso, maior a capacidade disponível
+    time_factor = min(1.0, time_since_last_use / 60.0)
+    
+    # Adiciona um pequeno fator aleatório para evitar que todas as APIs com o mesmo
+    # tempo desde o último uso tenham exatamente a mesma pontuação
+    random_factor = 0.1 * random.random()
+    
+    # Calcula a pontuação final
+    available_capacity = limit * time_factor
+    score = available_capacity + random_factor
+```
+
+### 3. Controle Preciso do Número de CNPJs em Processamento
+
+O sistema agora limita o número de CNPJs em processamento simultâneo para exatamente o número total de requisições por minuto que as APIs suportam:
+
+```python
 # Limita o número de CNPJs em processamento simultâneo
-# Mantém exatamente REQUESTS_PER_MINUTE CNPJs em processamento
-max_processing = REQUESTS_PER_MINUTE
+# Mantém exatamente o número total de requisições por minuto em processamento
+# para garantir que estamos processando na taxa máxima permitida
+max_processing = TOTAL_REQUESTS_PER_MINUTE
 ```
 
-### 2. Distribuição Inteligente entre APIs
+### 4. Limpeza de Variáveis de Ambiente
 
-No arquivo `app/services/api_manager.py`, implementamos uma estratégia de distribuição inteligente para garantir que cada API seja utilizada até seu limite máximo:
+Foram removidas variáveis de ambiente não relacionadas à aplicação que poderiam estar causando confusão.
 
-- Adicionamos um sistema de rastreamento de uso para cada API, registrando:
-  - O limite de requisições por minuto
-  - O timestamp da última requisição
-  - O contador de uso
+### 5. Script de Deploy Aprimorado
 
-- Implementamos o método `_get_apis_by_availability()` que ordena as APIs por disponibilidade atual, priorizando as que têm mais capacidade disponível no momento:
-  - Se uma API não foi usada recentemente (últimos 60 segundos), ela recebe prioridade máxima
-  - Caso contrário, calculamos a capacidade disponível com base no tempo decorrido desde o último uso
+O script de deploy foi atualizado para:
 
-```python
-def _get_apis_by_availability(self) -> List[Tuple[Any, str]]:
-    """
-    Ordena as APIs por disponibilidade atual, priorizando as que têm mais
-    capacidade disponível no momento.
-    """
-    now = time.time()
-    apis_with_scores = []
-    
-    for api, name in zip(self.apis, self.api_names):
-        # Calcula quantas requisições foram feitas no último minuto
-        usage_info = self.api_usage[name]
-        limit = usage_info["limit"]
-        last_used = usage_info["last_used"]
-        
-        # Se a API não foi usada recentemente, ela tem prioridade máxima
-        if last_used == 0 or now - last_used > 60:
-            score = limit  # Pontuação máxima
-        else:
-            # Calcula a capacidade disponível com base no tempo desde o último uso
-            time_factor = min(1.0, (now - last_used) / 60.0)
-            available_capacity = limit * time_factor
-            score = available_capacity
-        
-        apis_with_scores.append((api, name, score))
-    
-    # Ordena por pontuação (maior primeiro)
-    apis_with_scores.sort(key=lambda x: x[2], reverse=True)
-    
-    # Retorna apenas a API e o nome, sem a pontuação
-    return [(api, name) for api, name, _ in apis_with_scores]
-```
+- Calcular automaticamente a soma das taxas individuais das APIs
+- Verificar e configurar corretamente as variáveis de ambiente no Heroku
+- Reiniciar a fila de processamento após o deploy
 
-- Atualizamos o método `query_cnpj()` para usar esta ordenação inteligente em vez da distribuição aleatória anterior
-- Adicionamos atualização do rastreamento de uso após cada consulta bem-sucedida
+### 6. Scripts de Monitoramento
 
-## Configuração
+Foram adicionados scripts para:
 
-Para garantir que o sistema processe exatamente 11 CNPJs por minuto, certifique-se de que as seguintes configurações estejam definidas no arquivo `.env`:
+- Reiniciar a fila otimizada (`restart_optimized_queue.py`)
+- Verificar o status da fila (`check_queue_status.py`)
+
+## Resultados Esperados
+
+Com estas otimizações, o sistema agora deve:
+
+1. Processar exatamente 11 CNPJs por minuto (o máximo possível com as APIs disponíveis)
+2. Distribuir as requisições de forma inteligente entre as APIs
+3. Minimizar erros de limite de taxa excedido
+4. Fornecer ferramentas para monitoramento e manutenção da fila
+
+## Como Verificar o Funcionamento
+
+Para verificar se as otimizações estão funcionando corretamente:
+
+1. Execute o script de verificação de status:
+   ```
+   heroku run python check_queue_status.py
+   ```
+
+2. Monitore os logs para verificar se as requisições estão sendo distribuídas corretamente:
+   ```
+   heroku logs --tail
+   ```
+
+3. Verifique a taxa de processamento na última hora no relatório de status. Deve estar próxima de 660 CNPJs/hora (11 por minuto × 60 minutos).
+
+## Configuração das Variáveis de Ambiente
+
+Para garantir o funcionamento correto da fila otimizada, as seguintes variáveis de ambiente devem estar configuradas:
 
 ```
 RECEITAWS_ENABLED=True
@@ -95,29 +129,13 @@ CNPJA_OPEN_ENABLED=True
 RECEITAWS_REQUESTS_PER_MINUTE=3
 CNPJWS_REQUESTS_PER_MINUTE=3
 CNPJA_OPEN_REQUESTS_PER_MINUTE=5
-REQUESTS_PER_MINUTE=11
+REQUESTS_PER_MINUTE=11  # Deve ser igual à soma das taxas individuais
 ```
 
-## Benefícios
+## Manutenção
 
-Estas otimizações garantem que:
+Se for necessário ajustar os limites de requisições por minuto de qualquer API, lembre-se de:
 
-1. O sistema processe consistentemente 11 CNPJs por minuto, maximizando o throughput
-2. As APIs sejam utilizadas de forma eficiente, priorizando as que têm maior capacidade disponível
-3. O sistema respeite os limites individuais de cada API, evitando erros de limite excedido
-
-## Monitoramento
-
-Para verificar se o sistema está processando exatamente 11 CNPJs por minuto, você pode:
-
-1. Verificar os logs do sistema, que mostrarão mensagens detalhadas sobre o processamento
-2. Executar o script `check_queue_status.py` para obter estatísticas sobre a fila
-3. Monitorar o banco de dados para verificar a taxa de processamento de CNPJs
-
-## Próximos Passos
-
-Possíveis melhorias futuras incluem:
-
-1. Implementar métricas de desempenho para monitorar a taxa exata de processamento
-2. Adicionar um dashboard para visualizar o uso de cada API em tempo real
-3. Implementar um sistema de balanceamento dinâmico que ajuste os limites com base no desempenho observado
+1. Atualizar a variável de ambiente correspondente (ex: `RECEITAWS_REQUESTS_PER_MINUTE`)
+2. Atualizar a variável `REQUESTS_PER_MINUTE` para refletir a nova soma total
+3. Reiniciar a aplicação para que as alterações tenham efeito
