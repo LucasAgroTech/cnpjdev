@@ -824,6 +824,23 @@
             z-index: 1050; /* Adicionado z-index alto para garantir que apareça acima de outros elementos */
             position: absolute !important; /* Forçar posicionamento absoluto */
         }
+        
+        /* Ajuste específico para o menu de exportação */
+        .dropup .dropdown-menu {
+            bottom: 100% !important; /* Força o menu a aparecer acima do botão */
+            top: auto !important; /* Desativa o posicionamento automático no topo */
+            margin-bottom: 0.5rem !important; /* Adiciona espaço entre o botão e o menu */
+            transform: none !important; /* Desativa qualquer transformação que possa afetar o posicionamento */
+            max-height: 300px !important; /* Limita a altura máxima do menu */
+            overflow-y: auto !important; /* Adiciona rolagem se necessário */
+        }
+        
+        /* Ajuste específico para o menu de exportação no card-header */
+        .card-header .dropup .dropdown-menu {
+            position: fixed !important; /* Usa posicionamento fixo para evitar cortes */
+            transform: translateY(-100%) !important; /* Move para cima */
+            margin-top: -10px !important; /* Ajusta a posição vertical */
+        }
 
         .dropdown-item {
             color: var(--text);
@@ -1497,11 +1514,11 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title"><i class="bi bi-graph-up data-icon"></i>MONITOR</h5>
                         <div>
-                            <div class="dropup d-inline-block me-2">
+                            <div class="dropup d-inline-block me-2 position-relative">
                                 <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-file-earmark-binary me-1"></i> EXPORTAR
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown" style="z-index: 1050;">
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown" style="z-index: 1050; position: fixed !important; transform: translateY(-100%) !important; margin-top: -10px !important;">
                                     <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
                                     <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados</a></li>
                                     <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Seleção Atual</a></li>
