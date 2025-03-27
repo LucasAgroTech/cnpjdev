@@ -161,6 +161,96 @@ def get_cnpj_data(
     logger.info(f"Dados do CNPJ {clean_cnpj} retornados com sucesso")
     return data
 
+@router.post("/reset-errors")
+async def reset_errors_public(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    api_client: APIManager = Depends(get_api_client)
+):
+    """
+    Endpoint público para resetar CNPJs com status de erro
+    """
+    logger.info("Endpoint público: Resetando CNPJs com status de erro para a fila")
+    
+    # Encontra todos os CNPJs com status 'error'
+    error_queries = db.query(CNPJQuery).filter(CNPJQuery.status == "error").all()
+    
+    if not error_queries:
+        logger.info("Nenhum CNPJ com erro encontrado")
+        return {"message": "Nenhum CNPJ com erro encontrado", "count": 0}
+    
+    # Atualiza o status para 'queued'
+    count = 0
+    for query in error_queries:
+        query.status = "queued"
+        query.error_message = None
+        query.updated_at = datetime.utcnow()
+        count += 1
+    
+    db.commit()
+    logger.info(f"{count} CNPJs com erro resetados para 'queued'")
+    
+    # Obtém a instância singleton do gerenciador de fila
+    queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
+    
+    # Função para carregar CNPJs pendentes em background
+    async def load_and_process():
+        try:
+            await queue_manager.load_pending_cnpjs()
+            logger.info(f"Processamento reiniciado após resetar {count} CNPJs com erro")
+        except Exception as e:
+            logger.error(f"Erro ao reiniciar processamento: {str(e)}")
+    
+    # Agenda o processamento em background usando BackgroundTasks
+    background_tasks.add_task(load_and_process)
+    
+    return {"message": f"{count} CNPJs com erro resetados para a fila", "count": count}
+
+@router.post("/reset-rate-limited")
+async def reset_rate_limited_public(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    api_client: APIManager = Depends(get_api_client)
+):
+    """
+    Endpoint público para resetar CNPJs com status de limite de requisições excedido
+    """
+    logger.info("Endpoint público: Resetando CNPJs com status de limite de requisições para a fila")
+    
+    # Encontra todos os CNPJs com status 'rate_limited'
+    rate_limited_queries = db.query(CNPJQuery).filter(CNPJQuery.status == "rate_limited").all()
+    
+    if not rate_limited_queries:
+        logger.info("Nenhum CNPJ com limite de requisições excedido encontrado")
+        return {"message": "Nenhum CNPJ com limite de requisições excedido encontrado", "count": 0}
+    
+    # Atualiza o status para 'queued'
+    count = 0
+    for query in rate_limited_queries:
+        query.status = "queued"
+        query.error_message = None
+        query.updated_at = datetime.utcnow()
+        count += 1
+    
+    db.commit()
+    logger.info(f"{count} CNPJs com limite de requisições resetados para 'queued'")
+    
+    # Obtém a instância singleton do gerenciador de fila
+    queue_manager = await CNPJQueue.get_instance(api_client=api_client, db=db)
+    
+    # Função para carregar CNPJs pendentes em background
+    async def load_and_process():
+        try:
+            await queue_manager.load_pending_cnpjs()
+            logger.info(f"Processamento reiniciado após resetar {count} CNPJs com limite de requisições")
+        except Exception as e:
+            logger.error(f"Erro ao reiniciar processamento: {str(e)}")
+    
+    # Agenda o processamento em background usando BackgroundTasks
+    background_tasks.add_task(load_and_process)
+    
+    return {"message": f"{count} CNPJs com limite de requisições resetados para a fila", "count": count}
+
 @router.get("/export-excel/", response_class=Response)
 def export_excel(
     cnpjs: List[str] = Query(None),

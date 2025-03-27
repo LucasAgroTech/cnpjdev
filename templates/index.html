@@ -1437,24 +1437,19 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Tentando diferentes URLs para encontrar a correta
-                        console.log("Tentando resetar CNPJs com erro...");
-                        
-                        // Tenta várias URLs possíveis
+                        // Tenta primeiro a URL administrativa, depois a URL pública como fallback
                         let response;
-                        let urls = [
-                            '/api/admin/queue/reset-errors',
-                            '/api/admin/admin/queue/reset-errors',
-                            '/api/queue/reset-errors',
-                            '/admin/queue/reset-errors'
-                        ];
-                        
                         let success = false;
-                        let errorMsg = '';
+                        
+                        // Lista de URLs para tentar, em ordem de prioridade
+                        const urls = [
+                            '/api/admin/queue/reset-errors',  // URL administrativa original
+                            '/api/reset-errors'               // Nova URL pública
+                        ];
                         
                         for (const url of urls) {
                             try {
-                                console.log(`Tentando URL: ${url}`);
+                                console.log(`Tentando resetar CNPJs com erro usando URL: ${url}`);
                                 response = await fetch(url, {
                                     method: 'POST',
                                     headers: {
@@ -1467,17 +1462,15 @@
                                     success = true;
                                     break;
                                 } else {
-                                    console.log(`Falha com URL: ${url}, status: ${response.status}`);
-                                    errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                                    console.error(`Erro com URL: ${url}, status: ${response.status}`);
                                 }
                             } catch (e) {
-                                console.log(`Erro ao tentar URL: ${url}`, e);
-                                errorMsg = e.message;
+                                console.error(`Erro ao tentar URL: ${url}`, e);
                             }
                         }
                         
                         if (!success) {
-                            throw new Error(errorMsg || "Não foi possível resetar os CNPJs com erro");
+                            throw new Error("Não foi possível resetar os CNPJs com erro. Tente novamente mais tarde.");
                         }
                         
                         const result = await response.json();
@@ -1507,24 +1500,19 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Tentando diferentes URLs para encontrar a correta
-                        console.log("Tentando resetar CNPJs com limite excedido...");
-                        
-                        // Tenta várias URLs possíveis
+                        // Tenta primeiro a URL administrativa, depois a URL pública como fallback
                         let response;
-                        let urls = [
-                            '/api/admin/queue/reset-rate-limited',
-                            '/api/admin/admin/queue/reset-rate-limited',
-                            '/api/queue/reset-rate-limited',
-                            '/admin/queue/reset-rate-limited'
-                        ];
-                        
                         let success = false;
-                        let errorMsg = '';
+                        
+                        // Lista de URLs para tentar, em ordem de prioridade
+                        const urls = [
+                            '/api/admin/queue/reset-rate-limited',  // URL administrativa original
+                            '/api/reset-rate-limited'               // Nova URL pública
+                        ];
                         
                         for (const url of urls) {
                             try {
-                                console.log(`Tentando URL: ${url}`);
+                                console.log(`Tentando resetar CNPJs com limite excedido usando URL: ${url}`);
                                 response = await fetch(url, {
                                     method: 'POST',
                                     headers: {
@@ -1537,17 +1525,15 @@
                                     success = true;
                                     break;
                                 } else {
-                                    console.log(`Falha com URL: ${url}, status: ${response.status}`);
-                                    errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                                    console.error(`Erro com URL: ${url}, status: ${response.status}`);
                                 }
                             } catch (e) {
-                                console.log(`Erro ao tentar URL: ${url}`, e);
-                                errorMsg = e.message;
+                                console.error(`Erro ao tentar URL: ${url}`, e);
                             }
                         }
                         
                         if (!success) {
-                            throw new Error(errorMsg || "Não foi possível resetar os CNPJs com limite excedido");
+                            throw new Error("Não foi possível resetar os CNPJs com limite excedido. Tente novamente mais tarde.");
                         }
                         
                         const result = await response.json();
