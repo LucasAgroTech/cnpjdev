@@ -821,6 +821,8 @@
             box-shadow: var(--shadow-lg);
             padding: 0.75rem 0;
             animation: fadeIn 0.2s ease-out;
+            z-index: 1050; /* Adicionado z-index alto para garantir que apareça acima de outros elementos */
+            position: absolute !important; /* Forçar posicionamento absoluto */
         }
 
         .dropdown-item {
@@ -1495,11 +1497,11 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title"><i class="bi bi-graph-up data-icon"></i>MONITOR</h5>
                         <div>
-                            <div class="dropdown d-inline-block me-2">
+                            <div class="dropup d-inline-block me-2">
                                 <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-file-earmark-binary me-1"></i> EXPORTAR
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown" style="z-index: 1050;">
                                     <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
                                     <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados</a></li>
                                     <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Seleção Atual</a></li>
