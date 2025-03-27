@@ -1437,59 +1437,54 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Tentando diferentes URLs para encontrar a correta
-                        console.log("Tentando resetar CNPJs com erro...");
+                        console.log("Iniciando reset de CNPJs com erro...");
                         
-                        // Tenta várias URLs possíveis
-                        let response;
-                        let urls = [
-                            '/api/admin/queue/reset-errors',
-                            '/api/admin/admin/queue/reset-errors',
-                            '/api/queue/reset-errors',
-                            '/admin/queue/reset-errors'
-                        ];
+                        // Usa apenas a URL correta
+                        const url = '/api/admin/queue/reset-errors';
                         
-                        let success = false;
-                        let errorMsg = '';
-                        
-                        for (const url of urls) {
-                            try {
-                                console.log(`Tentando URL: ${url}`);
-                                response = await fetch(url, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
-                                });
-                                
-                                if (response.ok) {
-                                    console.log(`Sucesso com URL: ${url}`);
-                                    success = true;
-                                    break;
-                                } else {
-                                    console.log(`Falha com URL: ${url}, status: ${response.status}`);
-                                    errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                        try {
+                            console.log(`Enviando requisição para: ${url}`);
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                // Adiciona timestamp para evitar cache
+                                cache: 'no-cache'
+                            });
+                            
+                            console.log(`Resposta recebida: Status ${response.status}`);
+                            
+                            if (!response.ok) {
+                                // Tenta extrair mensagem de erro detalhada da resposta
+                                let errorDetail = '';
+                                try {
+                                    const errorData = await response.json();
+                                    errorDetail = errorData.detail || errorData.message || '';
+                                } catch (e) {
+                                    // Se não conseguir extrair JSON, usa o texto da resposta
+                                    errorDetail = await response.text();
                                 }
-                            } catch (e) {
-                                console.log(`Erro ao tentar URL: ${url}`, e);
-                                errorMsg = e.message;
+                                
+                                throw new Error(`Erro ${response.status}: ${response.statusText}${errorDetail ? ` - ${errorDetail}` : ''}`);
                             }
+                            
+                            const result = await response.json();
+                            console.log("Resultado da operação:", result);
+                            
+                            if (result.count > 0) {
+                                alert(`Reinicialização concluída! ${result.count} CNPJs com falha foram recolocados na fila.`);
+                            } else {
+                                alert('Nenhum CNPJ com falha foi encontrado para reiniciar.');
+                            }
+                            
+                            // Atualiza o status após resetar
+                            await updateStatus(true);
+                            
+                        } catch (e) {
+                            console.error(`Erro na requisição para ${url}:`, e);
+                            throw e;
                         }
-                        
-                        if (!success) {
-                            throw new Error(errorMsg || "Não foi possível resetar os CNPJs com erro");
-                        }
-                        
-                        const result = await response.json();
-                        
-                        if (result.count > 0) {
-                            alert(`Reinicialização concluída! ${result.count} CNPJs com falha foram recolocados na fila.`);
-                        } else {
-                            alert('Nenhum CNPJ com falha foi encontrado para reiniciar.');
-                        }
-                        
-                        // Atualiza o status após resetar
-                        await updateStatus(true);
                     }
                 } catch (error) {
                     console.error('Erro ao resetar CNPJs:', error);
@@ -1507,59 +1502,54 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Tentando diferentes URLs para encontrar a correta
-                        console.log("Tentando resetar CNPJs com limite excedido...");
+                        console.log("Iniciando reset de CNPJs com limite excedido...");
                         
-                        // Tenta várias URLs possíveis
-                        let response;
-                        let urls = [
-                            '/api/admin/queue/reset-rate-limited',
-                            '/api/admin/admin/queue/reset-rate-limited',
-                            '/api/queue/reset-rate-limited',
-                            '/admin/queue/reset-rate-limited'
-                        ];
+                        // Usa apenas a URL correta
+                        const url = '/api/admin/queue/reset-rate-limited';
                         
-                        let success = false;
-                        let errorMsg = '';
-                        
-                        for (const url of urls) {
-                            try {
-                                console.log(`Tentando URL: ${url}`);
-                                response = await fetch(url, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
-                                });
-                                
-                                if (response.ok) {
-                                    console.log(`Sucesso com URL: ${url}`);
-                                    success = true;
-                                    break;
-                                } else {
-                                    console.log(`Falha com URL: ${url}, status: ${response.status}`);
-                                    errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                        try {
+                            console.log(`Enviando requisição para: ${url}`);
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                // Adiciona timestamp para evitar cache
+                                cache: 'no-cache'
+                            });
+                            
+                            console.log(`Resposta recebida: Status ${response.status}`);
+                            
+                            if (!response.ok) {
+                                // Tenta extrair mensagem de erro detalhada da resposta
+                                let errorDetail = '';
+                                try {
+                                    const errorData = await response.json();
+                                    errorDetail = errorData.detail || errorData.message || '';
+                                } catch (e) {
+                                    // Se não conseguir extrair JSON, usa o texto da resposta
+                                    errorDetail = await response.text();
                                 }
-                            } catch (e) {
-                                console.log(`Erro ao tentar URL: ${url}`, e);
-                                errorMsg = e.message;
+                                
+                                throw new Error(`Erro ${response.status}: ${response.statusText}${errorDetail ? ` - ${errorDetail}` : ''}`);
                             }
+                            
+                            const result = await response.json();
+                            console.log("Resultado da operação:", result);
+                            
+                            if (result.count > 0) {
+                                alert(`Reinicialização concluída! ${result.count} CNPJs com limite excedido foram recolocados na fila.`);
+                            } else {
+                                alert('Nenhum CNPJ com limite excedido foi encontrado para reiniciar.');
+                            }
+                            
+                            // Atualiza o status após resetar
+                            await updateStatus(true);
+                            
+                        } catch (e) {
+                            console.error(`Erro na requisição para ${url}:`, e);
+                            throw e;
                         }
-                        
-                        if (!success) {
-                            throw new Error(errorMsg || "Não foi possível resetar os CNPJs com limite excedido");
-                        }
-                        
-                        const result = await response.json();
-                        
-                        if (result.count > 0) {
-                            alert(`Reinicialização concluída! ${result.count} CNPJs com limite excedido foram recolocados na fila.`);
-                        } else {
-                            alert('Nenhum CNPJ com limite excedido foi encontrado para reiniciar.');
-                        }
-                        
-                        // Atualiza o status após resetar
-                        await updateStatus(true);
                     }
                 } catch (error) {
                     console.error('Erro ao resetar CNPJs com limite excedido:', error);
