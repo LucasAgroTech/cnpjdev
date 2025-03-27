@@ -764,12 +764,12 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-search data-icon"></i>Consulta Única</h5>
+                        <h5 class="card-title"><i class="bi bi-search data-icon"></i>CONSULTA PONTUAL</h5>
                     </div>
                     <div class="card-body">
                         <form id="manual-form">
                             <div class="mb-3">
-                                <label for="cnpj-input" class="form-label fw-medium">CNPJ</label>
+                                <label for="cnpj-input" class="form-label fw-medium">IDENTIFICADOR CNPJ</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
                                     <input type="text" class="form-control" id="cnpj-input" placeholder="00.000.000/0000-00">
@@ -791,11 +791,11 @@
             <div class="col-lg-7">
                 <div class="card status-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-graph-up data-icon"></i>Dashboard</h5>
+                        <h5 class="card-title"><i class="bi bi-graph-up data-icon"></i>MONITOR DE DADOS</h5>
                         <div>
                             <div class="dropdown d-inline-block me-2">
                                 <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-file-earmark-binary me-1"></i> Exportar
+                                    <i class="bi bi-file-earmark-binary me-1"></i> EXPORTAR
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
                                     <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
@@ -805,7 +805,7 @@
                             </div>
                             <button class="btn btn-sm btn-outline-primary" id="refresh-status-btn">
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <i class="bi bi-arrow-repeat me-1"></i> Atualizar
+                                <i class="bi bi-arrow-repeat me-1"></i> ATUALIZAR
                             </button>
                         </div>
                     </div>
@@ -814,7 +814,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="card stat-card bg-surface">
                                     <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Total</h6>
+                                        <h6 class="card-subtitle mb-1">TOTAL</h6>
                                         <p class="card-text" id="total-count">0</p>
                                     </div>
                                 </div>
@@ -822,7 +822,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="card stat-card" style="background: rgba(13, 242, 201, 0.1);">
                                     <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Concluídos</h6>
+                                        <h6 class="card-subtitle mb-1">CONCLUÍDOS</h6>
                                         <p class="card-text" style="color: var(--success);" id="completed-count">0</p>
                                     </div>
                                 </div>
@@ -830,7 +830,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="card stat-card" style="background: rgba(255, 182, 72, 0.1);">
                                     <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Espera</h6>
+                                        <h6 class="card-subtitle mb-1">FILA</h6>
                                         <p class="card-text" style="color: var(--warning);" id="processing-count">0</p>
                                     </div>
                                 </div>
@@ -838,7 +838,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="card stat-card" style="background: rgba(255, 71, 87, 0.1);">
                                     <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">Falhou</h6>
+                                        <h6 class="card-subtitle mb-1">FALHAS</h6>
                                         <p class="card-text" style="color: var(--danger);" id="error-count">0</p>
                                     </div>
                                 </div>
@@ -854,9 +854,9 @@
                                                 <input type="checkbox" id="select-all-cnpjs" class="form-check-input">
                                             </div>
                                         </th>
-                                        <th>CNPJ</th>
+                                        <th>IDENTIFICADOR</th>
                                         <th>STATUS</th>
-                                        <th width="80"></th>
+                                        <th width="80">AÇÕES</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cnpj-status-list">
@@ -872,7 +872,7 @@
 
     <div class="footer">
         <div class="container text-center">
-            <p class="mb-0">CNPJ NEXUS - SISTEMA AVANÇADO DE RASPAGEM DE CNPJS <span class="text-primary">•</span> GEPES | EMBRAPII</p>
+            <p class="mb-0">CNPJ NEXUS - SISTEMA AVANÇADO DE RASPAGEM DE CNPJS <span class="text-primary">•</span> VIA RECEITAWS</p>
         </div>
     </div>
 
@@ -1088,7 +1088,7 @@
                     const tdActions = document.createElement('td');
                     if (result.status === 'completed') {
                         const viewBtn = document.createElement('button');
-                        viewBtn.className = 'btn btn-sm btn-outline-dark view-result-btn';
+                        viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
                         viewBtn.setAttribute('data-cnpj', result.cnpj);
                         viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
                         viewBtn.addEventListener('click', function() {
