@@ -953,6 +953,42 @@
                 timestamp: 0
             };
             
+            // Função para fazer fetch com retry e backoff exponencial
+            async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+                let retries = 0;
+                
+                while (retries < maxRetries) {
+                    try {
+                        const response = await fetch(url, options);
+                        
+                        if (response.ok) {
+                            return response;
+                        }
+                        
+                        // Se for erro 503 (Service Unavailable), tenta novamente
+                        if (response.status === 503) {
+                            retries++;
+                            const waitTime = Math.min(1000 * (2 ** retries), 10000); // Máximo de 10 segundos
+                            console.log(`Servidor sobrecarregado (503). Tentativa ${retries}/${maxRetries}. Aguardando ${waitTime/1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                            continue;
+                        }
+                        
+                        // Para outros erros, retorna a resposta para tratamento
+                        return response;
+                    } catch (error) {
+                        retries++;
+                        if (retries >= maxRetries) {
+                            throw error;
+                        }
+                        
+                        const waitTime = Math.min(1000 * (2 ** retries), 10000);
+                        console.log(`Erro de rede. Tentativa ${retries}/${maxRetries}. Aguardando ${waitTime/1000}s...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            }
+            
             // Função otimizada para atualizar o status
             async function updateStatus(forceRefresh = false) {
                 // Evita múltiplas chamadas simultâneas
@@ -965,7 +1001,7 @@
                     const now = Date.now();
                     
                     // Sempre busca dados frescos se forçar atualização
-                    const response = await fetch(`/api/status/?_t=${now}`);
+                    const response = await fetchWithRetry(`/api/status/?_t=${now}`);
                     if (!response.ok) {
                         throw new Error(`Erro ao atualizar status: ${response.status}`);
                     }
@@ -988,6 +1024,27 @@
                     
                 } catch (error) {
                     console.error('Erro ao atualizar status:', error);
+                    // Mostra mensagem de erro na interface
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger mt-3';
+                    errorMsg.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro ao atualizar status: ${error.message}`;
+                    errorMsg.style.opacity = '1';
+                    
+                    // Adiciona a mensagem após a tabela
+                    const cnpjList = document.querySelector('.cnpj-list');
+                    
+                    // Remove mensagens de erro anteriores
+                    const oldErrors = document.querySelectorAll('.alert-danger');
+                    oldErrors.forEach(el => el.remove());
+                    
+                    cnpjList.after(errorMsg);
+                    
+                    // Faz a mensagem desaparecer após 5 segundos
+                    setTimeout(() => {
+                        errorMsg.style.transition = 'opacity 1s';
+                        errorMsg.style.opacity = '0';
+                        setTimeout(() => errorMsg.remove(), 1000);
+                    }, 5000);
                 } finally {
                     isUpdating = false;
                     refreshStatusBtn.classList.remove('processing');
@@ -1437,41 +1494,24 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Tenta primeiro a URL administrativa, depois a URL pública como fallback
-                        let response;
-                        let success = false;
+                        // Usa diretamente a URL pública
+                        console.log("Tentando resetar CNPJs com erro...");
+                        const url = '/api/reset-errors';
+                        console.log(`Usando URL: ${url}`);
                         
-                        // Lista de URLs para tentar, em ordem de prioridade
-                        const urls = [
-                            '/api/admin/queue/reset-errors',  // URL administrativa original
-                            '/api/reset-errors'               // Nova URL pública
-                        ];
-                        
-                        for (const url of urls) {
-                            try {
-                                console.log(`Tentando resetar CNPJs com erro usando URL: ${url}`);
-                                response = await fetch(url, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
-                                });
-                                
-                                if (response.ok) {
-                                    console.log(`Sucesso com URL: ${url}`);
-                                    success = true;
-                                    break;
-                                } else {
-                                    console.error(`Erro com URL: ${url}, status: ${response.status}`);
-                                }
-                            } catch (e) {
-                                console.error(`Erro ao tentar URL: ${url}`, e);
+                        const response = await fetchWithRetry(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
                             }
+                        });
+                        
+                        if (!response.ok) {
+                            console.error(`Erro com URL: ${url}, status: ${response.status}`);
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
                         }
                         
-                        if (!success) {
-                            throw new Error("Não foi possível resetar os CNPJs com erro. Tente novamente mais tarde.");
-                        }
+                        console.log(`Sucesso com URL: ${url}`);
                         
                         const result = await response.json();
                         
@@ -1500,41 +1540,24 @@
                         this.disabled = true;
                         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
                         
-                        // Tenta primeiro a URL administrativa, depois a URL pública como fallback
-                        let response;
-                        let success = false;
+                        // Usa diretamente a URL pública
+                        console.log("Tentando resetar CNPJs com limite excedido...");
+                        const url = '/api/reset-rate-limited';
+                        console.log(`Usando URL: ${url}`);
                         
-                        // Lista de URLs para tentar, em ordem de prioridade
-                        const urls = [
-                            '/api/admin/queue/reset-rate-limited',  // URL administrativa original
-                            '/api/reset-rate-limited'               // Nova URL pública
-                        ];
-                        
-                        for (const url of urls) {
-                            try {
-                                console.log(`Tentando resetar CNPJs com limite excedido usando URL: ${url}`);
-                                response = await fetch(url, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
-                                });
-                                
-                                if (response.ok) {
-                                    console.log(`Sucesso com URL: ${url}`);
-                                    success = true;
-                                    break;
-                                } else {
-                                    console.error(`Erro com URL: ${url}, status: ${response.status}`);
-                                }
-                            } catch (e) {
-                                console.error(`Erro ao tentar URL: ${url}`, e);
+                        const response = await fetchWithRetry(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
                             }
+                        });
+                        
+                        if (!response.ok) {
+                            console.error(`Erro com URL: ${url}, status: ${response.status}`);
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
                         }
                         
-                        if (!success) {
-                            throw new Error("Não foi possível resetar os CNPJs com limite excedido. Tente novamente mais tarde.");
-                        }
+                        console.log(`Sucesso com URL: ${url}`);
                         
                         const result = await response.json();
                         
