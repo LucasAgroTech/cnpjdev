@@ -135,14 +135,42 @@ def get_status(
         clean_cnpjs = [''.join(filter(str.isdigit, cnpj)) for cnpj in cnpjs]
         return get_batch_status(db, clean_cnpjs)
     else:
-        # Obtém todas as consultas das últimas 24 horas
-        logger.info("Consultando status de todos os CNPJs das últimas 24 horas")
-        yesterday = datetime.utcnow() - timedelta(days=1)
+        # Obtém TODOS os CNPJs sem limitação de tempo
+        logger.info("Consultando status de todos os CNPJs no banco de dados")
         
-        queries = db.query(CNPJQuery).filter(CNPJQuery.created_at >= yesterday).all()
-        cnpjs = [query.cnpj for query in queries]
+        # Usar consultas SQL otimizadas para contagem
+        total_count = db.query(func.count(CNPJQuery.id)).scalar()
+        completed_count = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "completed").scalar()
+        processing_count = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "processing").scalar()
+        error_count = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "error").scalar()
+        queued_count = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "queued").scalar()
+        rate_limited_count = db.query(func.count(CNPJQuery.id)).filter(CNPJQuery.status == "rate_limited").scalar()
         
-        return get_batch_status(db, cnpjs)
+        # Obter apenas os CNPJs mais recentes para exibição na tabela (limitado a 100 para performance)
+        recent_queries = db.query(CNPJQuery).order_by(CNPJQuery.updated_at.desc()).limit(100).all()
+        cnpjs = [query.cnpj for query in recent_queries]
+        
+        # Criar o objeto de resposta com contagens precisas
+        statuses = []
+        for cnpj in cnpjs:
+            query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
+            
+            if query:
+                statuses.append(schemas.CNPJStatus(
+                    cnpj=cnpj,
+                    status=query.status,
+                    error_message=query.error_message
+                ))
+        
+        return schemas.CNPJBatchStatus(
+            total=total_count,
+            completed=completed_count,
+            processing=processing_count,
+            error=error_count,
+            queued=queued_count,
+            rate_limited=rate_limited_count,
+            results=statuses
+        )
 
 @router.get("/cnpj/{cnpj}", response_model=schemas.CNPJDataFull)
 def get_cnpj_data(
@@ -675,21 +703,49 @@ async def cleanup_duplicates(
 def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
     """
     Obtém status de lote para uma lista de CNPJs
+    Versão otimizada para consultas mais eficientes
     """
-    statuses = []
-    total = len(cnpjs)
+    if not cnpjs:
+        return schemas.CNPJBatchStatus(
+            total=0,
+            completed=0,
+            processing=0,
+            error=0,
+            queued=0,
+            rate_limited=0,
+            results=[]
+        )
+    
+    # Consulta otimizada para obter todos os CNPJs de uma vez
+    # Usamos a subconsulta para pegar apenas o registro mais recente de cada CNPJ
+    subquery = db.query(
+        CNPJQuery.cnpj,
+        CNPJQuery.status,
+        CNPJQuery.error_message,
+        func.row_number().over(
+            partition_by=CNPJQuery.cnpj,
+            order_by=CNPJQuery.created_at.desc()
+        ).label('rn')
+    ).filter(CNPJQuery.cnpj.in_(cnpjs)).subquery()
+    
+    # Seleciona apenas as linhas com row_number = 1 (mais recentes)
+    query_results = db.query(subquery).filter(subquery.c.rn == 1).all()
+    
+    # Mapeia os resultados para um dicionário para acesso rápido
+    cnpj_status_map = {result.cnpj: (result.status, result.error_message) for result in query_results}
+    
+    # Inicializa contadores
     completed = 0
     processing = 0
     error = 0
     queued = 0
     rate_limited = 0
     
+    # Prepara a lista de status
+    statuses = []
     for cnpj in cnpjs:
-        query = db.query(CNPJQuery).filter(CNPJQuery.cnpj == cnpj).order_by(CNPJQuery.created_at.desc()).first()
-        
-        if query:
-            status = query.status
-            error_message = query.error_message
+        if cnpj in cnpj_status_map:
+            status, error_message = cnpj_status_map[cnpj]
             
             if status == "completed":
                 completed += 1
@@ -712,7 +768,7 @@ def get_batch_status(db: Session, cnpjs: List[str]) -> schemas.CNPJBatchStatus:
         ))
     
     return schemas.CNPJBatchStatus(
-        total=total,
+        total=len(cnpjs),
         completed=completed,
         processing=processing,
         error=error,
