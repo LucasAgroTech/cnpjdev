@@ -3,191 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNPJ Nexus - Sistema Avançado de Raspagem de CNPJs</title>
+    <title>CNPJ Nexus - Sistema de Gestão e Processamento de Dados CNPJ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #0df2c9;
-            --primary-dark: #0bbea0;
-            --primary-glow: rgba(13, 242, 201, 0.3);
-            --secondary: #6e3bfe;
-            --secondary-dark: #5b2ff0;
-            --secondary-glow: rgba(110, 59, 254, 0.3);
-            --tertiary: #ff3864;
-            --background: #0a1929;
-            --surface: #0f2940;
-            --surface-dark: #0d2338;
-            --surface-light: #1a3c5c;
-            --text: #ffffff;
-            --text-secondary: #b8d1e8;
-            --border: #1e4976;
-            --warning: #ffb648;
-            --danger: #ff4757;
-            --info: #18dcff;
-            --success: #0df2c9;
-            --gradient-primary: linear-gradient(135deg, #0df2c9, #0bbea0);
-            --gradient-accent: linear-gradient(135deg, #6e3bfe, #ff3864);
-            --gradient-header: linear-gradient(135deg, #0a1929, #091f38);
-            --gradient-surface: linear-gradient(145deg, #0f2940, #0d2338);
-            --grid-line: rgba(13, 242, 201, 0.1);
-            --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.4);
-            --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
-            --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.6);
-            --glow-sm: 0 0 5px var(--primary-glow);
-            --glow-md: 0 0 10px var(--primary-glow);
-            --glow-lg: 0 0 20px var(--primary-glow);
-            --border-radius: 0.375rem;
-            --border-radius-lg: 0.625rem;
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 var(--primary-glow); }
-            70% { box-shadow: 0 0 0 5px rgba(13, 242, 201, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(13, 242, 201, 0); }
-        }
-
-        @keyframes scanning {
-            0% { transform: translateY(-100%); opacity: 0.3; }
-            50% { opacity: 0.6; }
-            100% { transform: translateY(100%); opacity: 0.3; }
-        }
-
-        @keyframes grid-flow {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 100% 100%; }
+            --primary: #3321e6;
+            --primary-light: #5042eb;
+            --primary-dark: #2219a8;
+            --primary-bg: rgba(51, 33, 230, 0.05);
+            --primary-border: rgba(51, 33, 230, 0.2);
+            
+            --warning: #f9d62e;
+            --warning-dark: #e6c014;
+            --warning-light: #fbe56c;
+            --warning-bg: rgba(249, 214, 46, 0.1);
+            
+            --success: #009c00;
+            --success-light: #00c000;
+            --success-dark: #007800;
+            --success-bg: rgba(0, 156, 0, 0.05);
+            
+            --danger: #e53935;
+            --info: #0288d1;
+            
+            --surface: #ffffff;
+            --surface-dark: #f5f7fa;
+            --surface-darker: #ebeef2;
+            
+            --background: #f8fafc;
+            --text: #334155;
+            --text-light: #64748b;
+            --text-xlight: #94a3b8;
+            --text-dark: #1e293b;
+            
+            --border: #e2e8f0;
+            --border-dark: #cbd5e1;
+            
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            
+            --border-radius-sm: 0.375rem;
+            --border-radius: 0.5rem;
+            --border-radius-lg: 0.75rem;
+            
+            --transition: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
         }
 
         * {
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary) var(--surface-dark);
-        }
-
-        *::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        *::-webkit-scrollbar-track {
-            background: var(--surface-dark);
-            border-radius: 10px;
-        }
-
-        *::-webkit-scrollbar-thumb {
-            background-color: var(--primary);
-            border-radius: 10px;
-            border: 2px solid var(--surface-dark);
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Rajdhani', sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--background);
             color: var(--text);
             line-height: 1.6;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(13, 242, 201, 0.03) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(110, 59, 254, 0.03) 0%, transparent 20%),
-                linear-gradient(to right, rgba(13, 242, 201, 0.01) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(13, 242, 201, 0.01) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 20px 20px, 20px 20px;
-            position: relative;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(rgba(13, 242, 201, 0.1) 1px, transparent 1px);
-            background-size: 30px 30px;
-            opacity: 0.3;
-            pointer-events: none;
-            z-index: 0;
+        body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        body::-webkit-scrollbar-track {
+            background: var(--surface-dark);
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background-color: var(--primary-light);
+            border-radius: 6px;
+            border: 2px solid var(--surface-dark);
         }
 
         h1, h2, h3, h4, h5, h6 {
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             font-weight: 600;
-            color: var(--text);
-            letter-spacing: 0.5px;
+            color: var(--text-dark);
+            letter-spacing: -0.01em;
         }
 
+        .monospace {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* Header Styles */
         .header {
-            background: var(--gradient-header);
-            border-bottom: 1px solid var(--border);
-            padding: 2.5rem 0;
-            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 1.5rem;
             position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(to right, transparent 10%, rgba(13, 242, 201, 0.03) 50%, transparent 90%);
-            animation: scanning 10s linear infinite;
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        .header h1 {
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            position: relative;
-            z-index: 2;
-            text-shadow: 0 0 10px rgba(13, 242, 201, 0.5);
-        }
-
-        .header .lead {
-            opacity: 0.9;
-            font-weight: 500;
-            color: var(--text-secondary);
-            position: relative;
-            z-index: 2;
+            box-shadow: var(--shadow-md);
         }
 
         .header-content {
             position: relative;
-            z-index: 3;
+            z-index: 2;
         }
 
-        .data-icon {
-            color: var(--primary);
-            filter: drop-shadow(0 0 5px var(--primary-glow));
-            margin-right: 0.5rem;
+        .header h1 {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            font-size: 1.75rem;
         }
 
+        .header .lead {
+            opacity: 0.9;
+            font-weight: 400;
+            font-size: 1rem;
+        }
+
+        .header-icon {
+            background: rgba(255, 255, 255, 0.2);
+            font-size: 1.5rem;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            margin-right: 1rem;
+        }
+
+        /* Card Styles */
         .card {
-            background: var(--gradient-surface);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-md);
-            transition: var(--transition);
             overflow: hidden;
-            position: relative;
-        }
-
-        .card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--gradient-accent);
-            opacity: 0;
+            margin-bottom: 1.5rem;
             transition: var(--transition);
         }
 
@@ -196,25 +152,20 @@
             transform: translateY(-2px);
         }
 
-        .card:hover::after {
-            opacity: 1;
-        }
-
         .card-header {
-            background-color: var(--surface-dark);
-            border-bottom: 1px solid var(--border);
             padding: 1rem 1.25rem;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 500;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--surface);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .card-header .card-title {
             margin: 0;
-            color: var(--text);
-            font-size: 1.25rem;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
         }
 
         .card-body {
@@ -222,191 +173,237 @@
             position: relative;
         }
 
-        .file-upload-container {
-            border: 2px dashed var(--border);
+        /* Data Card/Stats */
+        .data-card {
+            background: var(--surface);
             border-radius: var(--border-radius);
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            background-color: rgba(13, 242, 201, 0.03);
-            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            padding: 1.25rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             position: relative;
             overflow: hidden;
+            border: 1px solid var(--border);
+            transition: var(--transition);
         }
 
-        .file-upload-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-                linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-            background-size: 20px 20px;
-            animation: grid-flow 20s linear infinite;
-            opacity: 0.5;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .file-upload-container:hover {
-            border-color: var(--primary);
-            box-shadow: var(--glow-sm);
-            cursor: pointer;
+        .data-card:hover {
+            box-shadow: var(--shadow-md);
             transform: translateY(-2px);
         }
 
-        .status-card {
-            margin-bottom: 1.5rem;
+        .data-card.primary {
+            border-left: 4px solid var(--primary);
         }
 
-        .btn {
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            padding: 0.5rem 1.25rem;
-            border-radius: 0.375rem;
-            transition: var(--transition);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: var(--shadow-sm);
-            border: none;
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
+        .data-card.success {
+            border-left: 4px solid var(--success);
         }
 
-        .btn::before {
-            content: '';
+        .data-card.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        .data-card.danger {
+            border-left: 4px solid var(--danger);
+        }
+
+        .data-card .data-icon {
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.1);
-            transition: var(--transition);
-            z-index: -1;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            opacity: 0.2;
         }
 
-        .btn:hover::before {
-            left: 0;
+        .data-card .data-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .data-card .data-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0;
+            color: var(--text-dark);
+        }
+
+        .data-card.primary .data-value {
+            color: var(--primary);
+        }
+
+        .data-card.success .data-value {
+            color: var(--success);
+        }
+
+        .data-card.warning .data-value {
+            color: var(--warning-dark);
+        }
+
+        .data-card.danger .data-value {
+            color: var(--danger);
+        }
+
+        /* Form Elements */
+        .form-control, .input-group-text {
+            padding: 0.65rem 1rem;
+            font-size: 0.95rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-dark);
+            background-color: var(--surface);
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(51, 33, 230, 0.15);
+        }
+
+        .input-group-text {
+            background-color: var(--surface-dark);
+            color: var(--text-light);
+        }
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .form-text {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        /* Buttons */
+        .btn {
+            font-weight: 500;
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-transform: none;
+            letter-spacing: 0;
+            border: none;
         }
 
         .btn-primary {
-            background: var(--gradient-primary);
-            color: var(--background);
+            background-color: var(--primary);
+            color: white;
         }
 
-        .btn-primary:hover {
-            background: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: var(--glow-sm);
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: var(--primary-dark);
+            color: white;
         }
 
         .btn-success {
-            background: var(--success);
-            color: var(--background);
+            background-color: var(--success);
+            color: white;
         }
 
-        .btn-success:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--glow-sm);
+        .btn-success:hover, .btn-success:focus {
+            background-color: var(--success-dark);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--text-dark);
+        }
+
+        .btn-warning:hover, .btn-warning:focus {
+            background-color: var(--warning-dark);
+            color: var(--text-dark);
         }
 
         .btn-outline-primary {
-            background: transparent;
             border: 1px solid var(--primary);
             color: var(--primary);
         }
 
-        .btn-outline-primary:hover {
-            background: var(--primary);
-            color: var(--background);
-            transform: translateY(-2px);
-            box-shadow: var(--glow-sm);
+        .btn-outline-primary:hover, .btn-outline-primary:focus {
+            background-color: var(--primary);
+            color: white;
         }
 
-        .btn-outline-danger:hover {
-            transform: translateY(-2px);
+        .btn-outline-success {
+            border: 1px solid var(--success);
+            color: var(--success);
         }
 
-        .spinner-border {
-            display: none;
-            width: 1rem;
-            height: 1rem;
+        .btn-outline-success:hover, .btn-outline-success:focus {
+            background-color: var(--success);
+            color: white;
         }
 
-        .processing .spinner-border {
-            display: inline-block;
+        .btn-sm {
+            padding: 0.35rem 0.8rem;
+            font-size: 0.875rem;
         }
 
-        .status-badge {
-            font-size: 0.75rem;
-            padding: 0.35em 0.65em;
-            border-radius: 50rem;
-            font-weight: 600;
-            font-family: 'Roboto Mono', monospace;
-            letter-spacing: 0.5px;
-            box-shadow: var(--shadow-sm);
-            display: inline-block;
-        }
-
-        .bg-success {
-            background-color: var(--success) !important;
-            color: var(--background);
-        }
-
-        .bg-warning {
-            background-color: var(--warning) !important;
-            color: var(--background);
-        }
-
-        .bg-danger {
-            background-color: var(--danger) !important;
-            color: var(--text);
-        }
-
-        .bg-info {
-            background-color: var(--info) !important;
-            color: var(--background);
-        }
-
-        .cnpj-list {
-            max-height: 400px;
-            overflow-y: auto;
+        /* Upload Area */
+        .upload-container {
+            border: 2px dashed var(--border-dark);
             border-radius: var(--border-radius);
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
-            background-color: white;
-            border: 1px solid var(--border);
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background-color: var(--surface-dark);
+            transition: var(--transition);
             position: relative;
+            cursor: pointer;
+        }
+
+        .upload-container:hover {
+            border-color: var(--primary);
+            background-color: var(--primary-bg);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        /* Table Styles */
+        .cnpj-list {
+            overflow: hidden;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            background-color: var(--surface);
         }
 
         .table {
             margin-bottom: 0;
-            color: white;
         }
 
         .table thead th {
-            background-color: var(--surface);
-            color: var(--primary);
-            font-weight: 700;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border-bottom: 1px solid var(--border);
+            background-color: var(--surface-dark);
+            font-weight: 600;
+            color: var(--text-dark);
             padding: 0.75rem 1rem;
-            text-shadow: 0 0 2px rgba(13, 242, 201, 0.5);
+            border-bottom: 2px solid var(--border-dark);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .table tbody td {
+            padding: 1rem;
             border-top: 1px solid var(--border);
-            padding: 0.75rem 1rem;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 500;
-            background-color: rgba(255, 255, 255, 0.9);
+            color: var(--text);
+            font-size: 0.95rem;
+            vertical-align: middle;
         }
 
         .table-hover tbody tr {
@@ -414,160 +411,96 @@
         }
 
         .table-hover tbody tr:hover {
-            background-color: rgba(13, 242, 201, 0.2);
-        }
-        
-        .table-hover tbody tr:hover td {
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: var(--primary-bg);
         }
 
-        .form-control {
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            border: 1px solid var(--border);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.95rem;
-            background-color: var(--surface-dark);
-            color: var(--text);
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
-            transition: var(--transition);
+        /* Status Badges */
+        .status-badge {
+            padding: 0.35em 0.75em;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
         }
 
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: var(--glow-sm);
-            background-color: rgba(13, 242, 201, 0.05);
+        .badge-completed {
+            background-color: var(--success-bg);
+            color: var(--success);
         }
 
-        .form-control::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.7;
+        .badge-processing {
+            background-color: var(--warning-bg);
+            color: var(--warning-dark);
         }
 
-        .input-group-text {
-            background-color: var(--surface);
-            border: 1px solid var(--border);
+        .badge-queued {
+            background-color: var(--primary-bg);
             color: var(--primary);
         }
 
-        .form-check-input {
-            cursor: pointer;
-            background-color: white;
-            border: 1px solid var(--primary-dark);
+        .badge-error {
+            background-color: rgba(229, 57, 53, 0.1);
+            color: var(--danger);
         }
 
-        .form-check-input:checked {
-            background-color: var(--primary);
-            border-color: var(--primary);
-            box-shadow: var(--glow-sm);
+        /* Spinners */
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
         }
 
-        .form-label {
-            color: var(--text);
-            font-weight: 500;
-        }
-
-        .form-text {
-            color: var(--text-secondary);
-            font-family: 'Rajdhani', sans-serif;
-        }
-
-        .stat-card {
-            border-radius: var(--border-radius);
-            transition: var(--transition);
+        /* Progress bar */
+        .progress-thin {
+            height: 4px;
+            background-color: var(--surface-dark);
+            margin-top: 0.75rem;
+            border-radius: 2px;
             overflow: hidden;
-            height: 100%;
-            border: 1px solid var(--border);
         }
 
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--glow-sm);
+        .progress-thin .progress-bar {
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            border-radius: 2px;
         }
 
-        .stat-card h6 {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 400;
-        }
-
-        .stat-card .card-text {
-            font-weight: 700;
-            margin-bottom: 0;
-            color: var(--text);
-            font-size: 1.75rem;
-        }
-
+        /* Footer */
         .footer {
-            margin-top: 3rem;
+            margin-top: auto;
             padding: 1.5rem 0;
             background-color: var(--surface-dark);
             border-top: 1px solid var(--border);
-            color: var(--text-secondary);
-            position: relative;
-            overflow: hidden;
+            color: var(--text-light);
         }
 
-        .footer::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background: var(--gradient-accent);
-        }
-
+        /* Modal Styles */
         .modal-content {
             background: var(--surface);
-            border: 1px solid var(--border);
+            border: none;
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow-lg);
-            overflow: hidden;
         }
 
         .modal-header {
             border-bottom: 1px solid var(--border);
-            background-color: var(--surface-dark);
             padding: 1.25rem 1.5rem;
         }
 
         .modal-header .modal-title {
-            color: var(--text);
-            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
         }
 
         .modal-body {
             padding: 1.5rem;
-            color: var(--text);
         }
 
         .modal-footer {
             border-top: 1px solid var(--border);
             padding: 1.25rem 1.5rem;
-            background-color: var(--surface-dark);
         }
 
-        pre {
-            background-color: var(--surface-dark);
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border);
-            font-size: 0.875rem;
-            font-family: 'Roboto Mono', monospace;
-            color: var(--text);
-            padding: 1rem;
-        }
-
-        .upload-icon {
-            animation: pulse 2s infinite;
-            color: var(--primary);
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
+        /* Dropdown Styles */
         .dropdown-menu {
             background-color: var(--surface);
             border: 1px solid var(--border);
@@ -578,75 +511,81 @@
 
         .dropdown-item {
             color: var(--text);
-            font-family: 'Rajdhani', sans-serif;
             padding: 0.5rem 1rem;
             transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .dropdown-item:hover {
-            background-color: rgba(13, 242, 201, 0.1);
+            background-color: var(--primary-bg);
             color: var(--primary);
         }
 
         .dropdown-item i {
             color: var(--primary);
-            margin-right: 0.5rem;
+        }
+
+        /* Alert Styles */
+        .alert {
+            border-radius: var(--border-radius);
+            border: 1px solid transparent;
         }
 
         .alert-light {
-            background-color: var(--surface-light);
+            background-color: var(--surface-dark);
+            border-color: var(--border);
             color: var(--text);
-            border: 1px solid var(--border);
         }
 
-        .badge {
+        /* Utilities */
+        .monospace {
             font-family: 'Roboto Mono', monospace;
-            font-weight: 500;
-            padding: 0.35em 0.65em;
-            border-radius: 0.25rem;
         }
 
-        .btn-secondary {
-            background-color: var(--surface-light);
+        /* Code and Pre */
+        pre {
+            background-color: var(--surface-dark);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            font-family: 'Roboto Mono', monospace;
             color: var(--text);
+            padding: 1rem;
             border: 1px solid var(--border);
         }
 
-        .btn-secondary:hover {
-            background-color: var(--surface);
-            color: var(--primary);
+        /* Selected file container */
+        #selected-file-container {
+            background-color: var(--surface-dark);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
         }
 
-        .highlight-pulse {
-            position: relative;
+        /* Action buttons below table */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
         }
 
-        .highlight-pulse::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background-color: var(--primary);
-            opacity: 0.7;
-            animation: pulse 2s infinite;
-        }
-
+        /* Responsive adjustments */
         @media (max-width: 768px) {
             .header {
-                padding: 2rem 0;
+                padding: 1.5rem 0;
             }
             
             .card-header {
-                padding: 1rem 1.25rem;
+                padding: 1rem;
             }
             
             .card-body {
                 padding: 1.25rem;
             }
             
-            .file-upload-container {
+            .upload-container {
                 padding: 2rem 1rem;
             }
             
@@ -654,106 +593,61 @@
                 padding: 0.5rem 1rem;
             }
         }
-
-        /* Código hexadecimal animado */
-        .hex-code-animation {
-            position: absolute;
-            right: 1rem;
-            top: 1rem;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.8rem;
-            color: var(--primary);
-            opacity: 0.3;
-            pointer-events: none;
-            z-index: 0;
-            max-width: 250px;
-            overflow: hidden;
-            text-align: right;
-        }
-
-        /* Decorações futuristas */
-        .tech-decoration {
-            position: absolute;
-            width: 150px;
-            height: 150px;
-            border: 1px solid var(--primary);
-            border-radius: 50%;
-            opacity: 0.1;
-            pointer-events: none;
-        }
-
-        .tech-decoration.top-left {
-            top: -50px;
-            left: -50px;
-        }
-
-        .tech-decoration.bottom-right {
-            bottom: -50px;
-            right: -50px;
-        }
-
-        /* Barra de progresso para ações */
-        .progress-thin {
-            height: 2px;
-            background-color: var(--surface-dark);
-            margin-top: 0.5rem;
-            overflow: hidden;
-            border-radius: var(--border-radius);
-        }
-
-        .progress-thin .progress-bar {
-            background: var(--gradient-accent);
-            border-radius: var(--border-radius);
-        }
     </style>
 </head>
 <body>
-    <div class="tech-decoration top-left"></div>
-    <div class="tech-decoration bottom-right"></div>
-
     <div class="header">
-        <div class="container header-content">
-            <h1 class="mb-0"><i class="bi bi-cpu data-icon"></i>CNPJ NEXUS</h1>
-            <p class="lead">Sistema Avançado de Raspagem de CNPJs <span class="highlight-pulse">v1.0</span></p>
+        <div class="container">
+            <div class="d-flex align-items-center header-content">
+                <div class="header-icon">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <div>
+                    <h1 class="mb-0">CNPJ Nexus</h1>
+                    <p class="lead">Sistema avançado de processamento e análise de dados CNPJ</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="container mb-5">
+    <div class="container pb-5">
         <div class="row g-4">
             <div class="col-lg-5">
-                <div class="card mb-4">
+                <!-- Upload Card -->
+                <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-cloud-upload data-icon"></i>Upload</h5>
+                        <i class="bi bi-cloud-upload me-2 text-primary"></i>
+                        <h5 class="card-title">Processamento em Lote</h5>
                     </div>
                     <div class="card-body">
-                        <div class="hex-code-animation">
-                            0x7A45F8D2<br>0xE9C3B0A1<br>0x8F20D719<br>...
-                        </div>
                         <form id="upload-form" enctype="multipart/form-data">
-                            <div class="mb-3 file-upload-container" id="drop-zone">
+                            <div class="upload-container mb-3" id="drop-zone">
                                 <div class="mb-3">
-                                    <i class="bi bi-database-fill upload-icon"></i>
+                                    <i class="bi bi-file-earmark-spreadsheet upload-icon"></i>
                                 </div>
-                                <h5>Incluir CNPJs</h5>
-                                <p class="text-muted">Arraste o arquivo ou</p>
+                                <h5 class="mb-2">Carregar Lista de CNPJs</h5>
+                                <p class="text-muted mb-3">Arraste o arquivo ou clique para selecionar</p>
                                 <input type="file" id="file-input" class="d-none" accept=".csv,.xls,.xlsx">
                                 <button type="button" class="btn btn-primary" id="select-file-btn">
-                                    <i class="bi bi-folder me-2"></i>Selecionar Arquivo
+                                    <i class="bi bi-folder2-open"></i>
+                                    Selecionar Arquivo
                                 </button>
-                                <p class="mt-3 text-muted small">CSV | XLS | XLSX</p>
+                                <p class="mt-3 text-muted small">Formatos suportados: CSV | XLS | XLSX</p>
                             </div>
-                            <div class="mb-3" id="selected-file-container" style="display: none;">
-                                <div class="d-flex align-items-center p-3 bg-surface-dark rounded">
-                                    <i class="bi bi-file-earmark-binary me-3 text-primary" style="font-size: 1.5rem;"></i>
-                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate text-white"></span>
+                            
+                            <div id="selected-file-container" style="display: none;">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-file-earmark-excel me-3 text-primary" style="font-size: 1.25rem;"></i>
+                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate"></span>
                                     <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-file-btn">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
                             </div>
+                            
                             <button type="submit" class="btn btn-success w-100" id="upload-btn">
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span id="upload-btn-text"><i class="bi bi-lightning-fill me-2"></i>INICIAR EXTRAÇÃO</span>
+                                <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                <span id="upload-btn-text"><i class="bi bi-lightning-charge"></i> Iniciar Processamento</span>
                             </button>
                             <div class="progress-thin">
                                 <div class="progress-bar" role="progressbar" style="width: 0%"></div>
@@ -762,23 +656,25 @@
                     </div>
                 </div>
 
+                <!-- Manual Lookup -->
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-search data-icon"></i>CONSULTA PONTUAL</h5>
+                        <i class="bi bi-search me-2 text-primary"></i>
+                        <h5 class="card-title">Consulta Individual</h5>
                     </div>
                     <div class="card-body">
                         <form id="manual-form">
                             <div class="mb-3">
-                                <label for="cnpj-input" class="form-label fw-medium">IDENTIFICADOR CNPJ</label>
+                                <label for="cnpj-input" class="form-label">CNPJ</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
                                     <input type="text" class="form-control" id="cnpj-input" placeholder="00.000.000/0000-00">
                                 </div>
-                                <div class="form-text">Digite o identificador único para extração individual</div>
+                                <div class="form-text">Digite o CNPJ para consulta individual</div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100" id="consult-btn">
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span id="consult-btn-text"><i class="bi bi-search me-2"></i>EXTRAIR DADOS</span>
+                                <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                <span id="consult-btn-text"><i class="bi bi-search"></i> Consultar CNPJ</span>
                             </button>
                             <div class="progress-thin">
                                 <div class="progress-bar" role="progressbar" style="width: 0%"></div>
@@ -789,64 +685,64 @@
             </div>
 
             <div class="col-lg-7">
-                <div class="card status-card">
+                <!-- Status Card -->
+                <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-graph-up data-icon"></i>MONITOR DE DADOS</h5>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+                            <h5 class="card-title">Painel de Controle</h5>
+                        </div>
                         <div>
                             <div class="dropdown d-inline-block me-2">
                                 <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-file-earmark-binary me-1"></i> EXPORTAR
+                                    <i class="bi bi-file-earmark-excel"></i> Exportar
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
-                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
-                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados</a></li>
-                                    <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Seleção Atual</a></li>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel"></i> Exportar Todos</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle"></i> Apenas Concluídos</a></li>
+                                    <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check2-square"></i> Selecionados</a></li>
                                 </ul>
                             </div>
                             <button class="btn btn-sm btn-outline-primary" id="refresh-status-btn">
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <i class="bi bi-arrow-repeat me-1"></i> ATUALIZAR
+                                <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-arrow-repeat"></i> Atualizar
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="row g-3 mb-4">
                             <div class="col-6 col-md-3">
-                                <div class="card stat-card bg-surface">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">TOTAL</h6>
-                                        <p class="card-text" id="total-count">0</p>
-                                    </div>
+                                <div class="data-card primary">
+                                    <div class="data-title">Total</div>
+                                    <div class="data-value" id="total-count">0</div>
+                                    <i class="bi bi-database data-icon"></i>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background: rgba(13, 242, 201, 0.1);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">CONCLUÍDOS</h6>
-                                        <p class="card-text" style="color: var(--success);" id="completed-count">0</p>
-                                    </div>
+                                <div class="data-card success">
+                                    <div class="data-title">Concluídos</div>
+                                    <div class="data-value" id="completed-count">0</div>
+                                    <i class="bi bi-check-circle data-icon"></i>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background: rgba(255, 182, 72, 0.1);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">FILA</h6>
-                                        <p class="card-text" style="color: var(--warning);" id="processing-count">0</p>
-                                    </div>
+                                <div class="data-card warning">
+                                    <div class="data-title">Em Fila</div>
+                                    <div class="data-value" id="processing-count">0</div>
+                                    <i class="bi bi-hourglass-split data-icon"></i>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3">
-                                <div class="card stat-card" style="background: rgba(255, 71, 87, 0.1);">
-                                    <div class="card-body text-center py-3">
-                                        <h6 class="card-subtitle mb-1">FALHAS</h6>
-                                        <p class="card-text" style="color: var(--danger);" id="error-count">0</p>
-                                    </div>
+                                <div class="data-card danger">
+                                    <div class="data-title">Falhas</div>
+                                    <div class="data-value" id="error-count">0</div>
+                                    <i class="bi bi-exclamation-triangle data-icon"></i>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="cnpj-list">
-                            <table class="table table-sm table-hover align-middle">
+                            <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th width="40">
@@ -854,15 +750,24 @@
                                                 <input type="checkbox" id="select-all-cnpjs" class="form-check-input">
                                             </div>
                                         </th>
-                                        <th>IDENTIFICADOR</th>
-                                        <th>STATUS</th>
-                                        <th width="80">AÇÕES</th>
+                                        <th>CNPJ</th>
+                                        <th>Status</th>
+                                        <th width="80" class="text-end">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cnpj-status-list">
-                                    <!-- Será preenchido via JavaScript -->
+                                    <!-- Preenchido via JavaScript -->
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="reset-errors-btn">
+                                <i class="bi bi-arrow-repeat"></i> Reprocessar Falhas
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="auto-update-btn">
+                                <i class="bi bi-cpu"></i> Auto Atualizar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -872,21 +777,21 @@
 
     <div class="footer">
         <div class="container text-center">
-            <p class="mb-0">CNPJ NEXUS - SISTEMA AVANÇADO DE RASPAGEM DE CNPJS <span class="text-primary">•</span> VIA RECEITAWS</p>
+            <p class="mb-0">CNPJ Nexus • Sistema Avançado de Processamento e Análise de Dados CNPJ • v2.0</p>
         </div>
     </div>
 
-    <!-- Modal de resultado -->
-    <div class="modal fade" id="result-modal" tabindex="-1" aria-hidden="true">
+    <!-- Modal de detalhes do CNPJ -->
+    <div class="modal fade" id="result-modal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-braces data-icon"></i>DADOS EXTRAÍDOS</h5>
+                    <h5 class="modal-title" id="resultModalLabel"><i class="bi bi-info-circle me-2"></i>Detalhes do CNPJ</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div id="result-container">
-                        <!-- Será preenchido via JavaScript -->
+                        <!-- Preenchido via JavaScript -->
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -908,12 +813,15 @@
             const selectedFileName = document.getElementById('selected-file-name');
             const removeFileBtn = document.getElementById('remove-file-btn');
             const uploadBtn = document.getElementById('upload-btn');
+            const uploadSpinner = uploadBtn.querySelector('.spinner-border');
             
             const manualForm = document.getElementById('manual-form');
             const cnpjInput = document.getElementById('cnpj-input');
             const consultBtn = document.getElementById('consult-btn');
+            const consultSpinner = consultBtn.querySelector('.spinner-border');
             
             const refreshStatusBtn = document.getElementById('refresh-status-btn');
+            const refreshSpinner = refreshStatusBtn.querySelector('.spinner-border');
             const cnpjStatusList = document.getElementById('cnpj-status-list');
             
             const totalCount = document.getElementById('total-count');
@@ -924,6 +832,9 @@
             const resultModal = new bootstrap.Modal(document.getElementById('result-modal'));
             const resultContainer = document.getElementById('result-container');
             
+            const resetErrorsBtn = document.getElementById('reset-errors-btn');
+            const autoUpdateBtn = document.getElementById('auto-update-btn');
+            
             // Funções auxiliares
             function formatCNPJ(cnpj) {
                 cnpj = cnpj.replace(/\D/g, '');
@@ -933,11 +844,11 @@
             
             function getStatusBadge(status) {
                 const statusMap = {
-                    'completed': '<span class="badge bg-success status-badge">CONCLUÍDO</span>',
-                    'processing': '<span class="badge bg-warning status-badge">PROCESSANDO</span>',
-                    'queued': '<span class="badge bg-info status-badge">NA FILA</span>',
-                    'error': '<span class="badge bg-danger status-badge">FALHA</span>',
-                    'unknown': '<span class="badge bg-secondary status-badge">DESCONHECIDO</span>'
+                    'completed': '<span class="status-badge badge-completed"><i class="bi bi-check-circle"></i> Concluído</span>',
+                    'processing': '<span class="status-badge badge-processing"><i class="bi bi-arrow-repeat"></i> Processando</span>',
+                    'queued': '<span class="status-badge badge-queued"><i class="bi bi-clock"></i> Na Fila</span>',
+                    'error': '<span class="status-badge badge-error"><i class="bi bi-exclamation-triangle"></i> Falha</span>',
+                    'unknown': '<span class="status-badge badge-warning"><i class="bi bi-question-circle"></i> Desconhecido</span>'
                 };
                 return statusMap[status] || statusMap.unknown;
             }
@@ -996,7 +907,7 @@
                 
                 try {
                     isUpdating = true;
-                    refreshStatusBtn.classList.add('processing');
+                    refreshSpinner.classList.remove('d-none');
                     
                     const now = Date.now();
                     
@@ -1016,7 +927,7 @@
                     // Atualiza contadores
                     totalCount.textContent = data.total;
                     completedCount.textContent = data.completed;
-                    processingCount.textContent = data.processing;
+                    processingCount.textContent = data.processing + data.queued;
                     errorCount.textContent = data.error;
                     
                     // Renderiza tabela
@@ -1024,30 +935,24 @@
                     
                 } catch (error) {
                     console.error('Erro ao atualizar status:', error);
+                    
                     // Mostra mensagem de erro na interface
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'alert alert-danger mt-3';
-                    errorMsg.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro ao atualizar status: ${error.message}`;
-                    errorMsg.style.opacity = '1';
+                    const errorToast = document.createElement('div');
+                    errorToast.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
+                    errorToast.style.zIndex = "1050";
+                    errorToast.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro ao atualizar status: ${error.message}`;
+                    document.body.appendChild(errorToast);
                     
-                    // Adiciona a mensagem após a tabela
-                    const cnpjList = document.querySelector('.cnpj-list');
-                    
-                    // Remove mensagens de erro anteriores
-                    const oldErrors = document.querySelectorAll('.alert-danger');
-                    oldErrors.forEach(el => el.remove());
-                    
-                    cnpjList.after(errorMsg);
-                    
-                    // Faz a mensagem desaparecer após 5 segundos
+                    // Remove o toast após 5 segundos
                     setTimeout(() => {
-                        errorMsg.style.transition = 'opacity 1s';
-                        errorMsg.style.opacity = '0';
-                        setTimeout(() => errorMsg.remove(), 1000);
+                        errorToast.style.opacity = '0';
+                        errorToast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => errorToast.remove(), 500);
                     }, 5000);
+                    
                 } finally {
                     isUpdating = false;
-                    refreshStatusBtn.classList.remove('processing');
+                    refreshSpinner.classList.add('d-none');
                 }
             }
             
@@ -1074,11 +979,8 @@
                     
                     // Célula do CNPJ
                     const tdCnpj = document.createElement('td');
-                    const span = document.createElement('span');
-                    span.className = 'fw-bold text-dark';
-                    span.style.color = "#001428";
-                    span.textContent = formattedCNPJ;
-                    tdCnpj.appendChild(span);
+                    tdCnpj.className = 'monospace fw-medium';
+                    tdCnpj.textContent = formattedCNPJ;
                     
                     // Célula do status
                     const tdStatus = document.createElement('td');
@@ -1086,10 +988,13 @@
                     
                     // Célula de ações
                     const tdActions = document.createElement('td');
+                    tdActions.className = 'text-end';
+                    
                     if (result.status === 'completed') {
                         const viewBtn = document.createElement('button');
-                        viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
+                        viewBtn.className = 'btn btn-sm btn-outline-primary';
                         viewBtn.setAttribute('data-cnpj', result.cnpj);
+                        viewBtn.setAttribute('title', 'Ver detalhes');
                         viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
                         viewBtn.addEventListener('click', function() {
                             showResult(result.cnpj);
@@ -1110,6 +1015,17 @@
                 while (cnpjStatusList.firstChild) {
                     cnpjStatusList.removeChild(cnpjStatusList.firstChild);
                 }
+                
+                if (fragment.childElementCount === 0) {
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.colSpan = 4;
+                    td.className = 'text-center py-4 text-muted';
+                    td.innerHTML = '<i class="bi bi-inbox me-2"></i> Nenhum CNPJ encontrado';
+                    tr.appendChild(td);
+                    fragment.appendChild(tr);
+                }
+                
                 cnpjStatusList.appendChild(fragment);
                 
                 // Configura o checkbox "selecionar todos"
@@ -1128,38 +1044,42 @@
             async function showResult(cnpj) {
                 try {
                     const response = await fetch(`/api/cnpj/${cnpj}`);
+                    if (!response.ok) {
+                        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                    }
+                    
                     const data = await response.json();
                     
                     let html = `
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary p-3 rounded-circle me-3" style="box-shadow: 0 0 15px var(--primary-glow);">
-                                    <i class="bi bi-building text-dark" style="font-size: 2rem;"></i>
+                                <div class="bg-primary rounded-circle p-3 me-3" style="box-shadow: 0 0 15px rgba(51, 33, 230, 0.3);">
+                                    <i class="bi bi-building text-white" style="font-size: 1.5rem;"></i>
                                 </div>
                                 <div>
-                                    <h5 class="mb-1 text-white">${data.company_name || 'Sem nome'}</h5>
-                                    <p class="mb-0 text-white opacity-75">ID: <span class="text-primary">${formatCNPJ(data.cnpj)}</span></p>
+                                    <h5 class="mb-1 text-primary">${data.company_name || 'Sem nome'}</h5>
+                                    <p class="mb-0 text-muted monospace">${formatCNPJ(data.cnpj)}</p>
                                 </div>
                             </div>
-                            ${data.trade_name ? `<div class="alert alert-light"><strong class="text-dark">Nome Comercial:</strong> <span class="text-dark">${data.trade_name}</span></div>` : ''}
+                            ${data.trade_name ? `<div class="alert alert-light"><strong>Nome Fantasia:</strong> ${data.trade_name}</div>` : ''}
                         </div>
                         
                         <div class="row mb-4">
                             <div class="col-md-6 mb-3 mb-md-0">
                                 <div class="card h-100">
                                     <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-geo-alt me-2 data-icon"></i>Localização</h6>
-                                        <p class="mb-1 text-white">${data.address || 'Não informado'}</p>
-                                        <p class="mb-0 text-white">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
+                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-geo-alt me-2 text-primary"></i>Localização</h6>
+                                        <p class="mb-1">${data.address || 'Não informado'}</p>
+                                        <p class="mb-0">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-telephone me-2 data-icon"></i>Canais</h6>
-                                        <p class="mb-1 text-white"><strong>E-mail:</strong> ${data.email || 'Não informado'}</p>
-                                        <p class="mb-0 text-white"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
+                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-telephone me-2 text-primary"></i>Contato</h6>
+                                        <p class="mb-1"><strong>E-mail:</strong> ${data.email || 'Não informado'}</p>
+                                        <p class="mb-0"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1168,17 +1088,25 @@
                         <div class="mb-4">
                             <div class="card">
                                 <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-bank me-2 data-icon"></i>Simples Nacional</h6>
-                                    <p class="mb-1 text-white">${data.simples_nacional ? '<span class="badge bg-success">ATIVO</span>' : '<span class="badge bg-secondary">INATIVO</span>'}</p>
-                                    ${data.simples_nacional_date ? `<p class="mb-0 text-white"><strong>Desde:</strong> ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
+                                    <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-bank me-2 text-primary"></i>Simples Nacional</h6>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            ${data.simples_nacional ? 
+                                                '<span class="status-badge badge-completed" style="font-size: 0.875rem;"><i class="bi bi-check-circle"></i> Ativo</span>' : 
+                                                '<span class="status-badge badge-error" style="font-size: 0.875rem;"><i class="bi bi-x-circle"></i> Inativo</span>'}
+                                        </div>
+                                        ${data.simples_nacional_date ? 
+                                            `<span class="text-muted">Desde: ${new Date(data.simples_nacional_date).toLocaleDateString()}</span>` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
                         <div>
                             <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-code-slash me-2 data-icon"></i>DADOS RAW</h6>
+                                <div class="card-header d-flex align-items-center">
+                                    <i class="bi bi-code-slash me-2 text-primary"></i>
+                                    <h6 class="mb-0">Dados Completos</h6>
                                 </div>
                                 <div class="card-body p-0">
                                     <pre class="m-0 p-3 rounded-0" style="max-height: 300px; overflow: auto;">${JSON.stringify(data.raw_data, null, 2)}</pre>
@@ -1218,8 +1146,8 @@
                 e.stopPropagation();
             };
             
-            const highlight = () => dropZone.classList.add('bg-light');
-            const unhighlight = () => dropZone.classList.remove('bg-light');
+            const highlight = () => dropZone.classList.add('border-primary');
+            const unhighlight = () => dropZone.classList.remove('border-primary');
             
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, preventDefaults, {passive: false});
@@ -1246,7 +1174,7 @@
                 e.preventDefault();
                 
                 if (fileInput.files.length === 0) {
-                    alert('Selecione um arquivo para iniciar a extração de dados.');
+                    alert('Selecione um arquivo para iniciar o processamento.');
                     return;
                 }
                 
@@ -1254,9 +1182,9 @@
                 formData.append('file', fileInput.files[0]);
                 
                 try {
-                    uploadBtn.classList.add('processing');
+                    uploadSpinner.classList.remove('d-none');
                     uploadBtn.disabled = true;
-                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>PROCESSANDO...';
+                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-arrow-repeat"></i> Processando...';
                     
                     // Adiciona animação de progresso
                     const progressBar = uploadForm.querySelector('.progress-bar');
@@ -1280,11 +1208,24 @@
                     
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Erro na extração de dados.');
+                        throw new Error(errorData.detail || 'Erro no processamento.');
                     }
                     
                     const data = await response.json();
-                    alert(`Extração iniciada com sucesso! ${data.total} CNPJs adicionados à fila de processamento.`);
+                    
+                    // Toast de sucesso
+                    const successToast = document.createElement('div');
+                    successToast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3';
+                    successToast.style.zIndex = "1050";
+                    successToast.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${data.total} CNPJs adicionados à fila de processamento.`;
+                    document.body.appendChild(successToast);
+                    
+                    // Remove o toast após 5 segundos
+                    setTimeout(() => {
+                        successToast.style.opacity = '0';
+                        successToast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => successToast.remove(), 500);
+                    }, 5000);
                     
                     // Limpa o formulário
                     fileInput.value = '';
@@ -1300,11 +1241,25 @@
                     
                 } catch (error) {
                     console.error('Erro ao enviar arquivo:', error);
-                    alert('Erro durante a extração: ' + error.message);
+                    
+                    // Toast de erro
+                    const errorToast = document.createElement('div');
+                    errorToast.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
+                    errorToast.style.zIndex = "1050";
+                    errorToast.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro: ${error.message}`;
+                    document.body.appendChild(errorToast);
+                    
+                    // Remove o toast após 5 segundos
+                    setTimeout(() => {
+                        errorToast.style.opacity = '0';
+                        errorToast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => errorToast.remove(), 500);
+                    }, 5000);
+                    
                 } finally {
-                    uploadBtn.classList.remove('processing');
+                    uploadSpinner.classList.add('d-none');
                     uploadBtn.disabled = false;
-                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-lightning-fill me-2"></i>INICIAR EXTRAÇÃO';
+                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-lightning-charge"></i> Iniciar Processamento';
                 }
             });
             
@@ -1314,14 +1269,14 @@
                 
                 const cnpj = cnpjInput.value.trim();
                 if (!cnpj) {
-                    alert('Digite um CNPJ para iniciar a extração de dados.');
+                    alert('Digite um CNPJ para iniciar o processamento.');
                     return;
                 }
                 
                 try {
-                    consultBtn.classList.add('processing');
+                    consultSpinner.classList.remove('d-none');
                     consultBtn.disabled = true;
-                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>EXTRAINDO...';
+                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-arrow-repeat"></i> Consultando...';
                     
                     // Adiciona animação de progresso
                     const progressBar = manualForm.querySelector('.progress-bar');
@@ -1350,11 +1305,24 @@
                     
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Erro na extração de dados.');
+                        throw new Error(errorData.detail || 'Erro no processamento.');
                     }
                     
                     await response.json();
-                    alert('CNPJ adicionado à fila de processamento!');
+                    
+                    // Toast de sucesso
+                    const successToast = document.createElement('div');
+                    successToast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3';
+                    successToast.style.zIndex = "1050";
+                    successToast.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> CNPJ adicionado à fila de processamento.`;
+                    document.body.appendChild(successToast);
+                    
+                    // Remove o toast após 5 segundos
+                    setTimeout(() => {
+                        successToast.style.opacity = '0';
+                        successToast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => successToast.remove(), 500);
+                    }, 5000);
                     
                     // Limpa o formulário
                     cnpjInput.value = '';
@@ -1369,11 +1337,25 @@
                     
                 } catch (error) {
                     console.error('Erro ao consultar CNPJ:', error);
-                    alert('Erro durante a extração: ' + error.message);
+                    
+                    // Toast de erro
+                    const errorToast = document.createElement('div');
+                    errorToast.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
+                    errorToast.style.zIndex = "1050";
+                    errorToast.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro: ${error.message}`;
+                    document.body.appendChild(errorToast);
+                    
+                    // Remove o toast após 5 segundos
+                    setTimeout(() => {
+                        errorToast.style.opacity = '0';
+                        errorToast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => errorToast.remove(), 500);
+                    }, 5000);
+                    
                 } finally {
-                    consultBtn.classList.remove('processing');
+                    consultSpinner.classList.add('d-none');
                     consultBtn.disabled = false;
-                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-search me-2"></i>EXTRAIR DADOS';
+                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-search"></i> Consultar CNPJ';
                 }
             });
             
@@ -1389,7 +1371,7 @@
                 }
                 
                 // Cria a URL com os CNPJs selecionados
-                const url = '/api/export-excel-stream/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
+                const url = '/api/export-excel/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
                 
                 // Abre a URL em uma nova aba
                 window.open(url, '_blank');
@@ -1397,14 +1379,6 @@
             
             // Botão de atualização de status
             refreshStatusBtn.addEventListener('click', updateStatus);
-            
-            // Carrega status inicial
-            updateStatus();
-            
-            // Botão de atualização manual
-            refreshStatusBtn.addEventListener('click', function() {
-                updateStatus();
-            });
             
             // Função para pausar/retomar atualização automática
             function toggleAutoUpdate() {
@@ -1417,6 +1391,13 @@
                 
                 if (autoUpdateEnabled) {
                     scheduleNextUpdate();
+                    autoUpdateBtn.innerHTML = '<i class="bi bi-cpu"></i> Auto Atualizar';
+                    autoUpdateBtn.classList.remove('btn-secondary');
+                    autoUpdateBtn.classList.add('btn-outline-secondary');
+                } else {
+                    autoUpdateBtn.innerHTML = '<i class="bi bi-cpu-fill"></i> Atualização Manual';
+                    autoUpdateBtn.classList.remove('btn-outline-secondary');
+                    autoUpdateBtn.classList.add('btn-secondary');
                 }
             }
             
@@ -1437,69 +1418,19 @@
                 }, 30000); // 30 segundos
             }
             
-            // Adiciona um botão para habilitar/desabilitar atualização automática
-            const autoUpdateBtn = document.createElement('button');
-            autoUpdateBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-            autoUpdateBtn.innerHTML = '<i class="bi bi-cpu"></i> AUTO';
-            autoUpdateBtn.title = 'Pausar atualização automática';
+            // Configura o botão de auto atualização
+            autoUpdateBtn.addEventListener('click', toggleAutoUpdate);
             
-            autoUpdateBtn.addEventListener('click', function() {
-                toggleAutoUpdate();
-                if (autoUpdateEnabled) {
-                    this.innerHTML = '<i class="bi bi-cpu"></i> AUTO';
-                    this.title = 'Pausar atualização automática';
-                    this.classList.remove('btn-secondary');
-                    this.classList.add('btn-outline-secondary');
-                } else {
-                    this.innerHTML = '<i class="bi bi-cpu-fill"></i> MANUAL';
-                    this.title = 'Retomar atualização automática';
-                    this.classList.remove('btn-outline-secondary');
-                    this.classList.add('btn-secondary');
-                }
-            });
-            
-            // Adiciona o botão ao lado do botão de atualização
-            refreshStatusBtn.parentNode.insertBefore(autoUpdateBtn, refreshStatusBtn.nextSibling);
-            
-            // Inicia atualização automática
-            scheduleNextUpdate();
-            
-            // Cria um container para os botões de ação
-            const actionButtonsContainer = document.createElement('div');
-            actionButtonsContainer.className = 'd-flex gap-2 mt-3';
-            
-            // Botão para resetar CNPJs com erro
-            const resetErrorsBtn = document.createElement('button');
-            resetErrorsBtn.id = 'reset-errors-btn';
-            resetErrorsBtn.className = 'btn btn-sm btn-outline-danger';
-            resetErrorsBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR FALHAS';
-            
-            // Botão para resetar CNPJs com limite excedido
-            const resetRateLimitedBtn = document.createElement('button');
-            resetRateLimitedBtn.id = 'reset-rate-limited-btn';
-            resetRateLimitedBtn.className = 'btn btn-sm btn-outline-warning';
-            resetRateLimitedBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR LIMITE EXCEDIDO';
-            
-            // Adiciona os botões ao container
-            actionButtonsContainer.appendChild(resetErrorsBtn);
-            actionButtonsContainer.appendChild(resetRateLimitedBtn);
-            
-            // Adiciona o container abaixo da tabela
-            document.querySelector('.cnpj-list').after(actionButtonsContainer);
-            
-            // Configura o botão de resetar falhas
+            // Configura o botão de resetar erros
             resetErrorsBtn.addEventListener('click', async function() {
                 try {
-                    if (confirm('Tem certeza que deseja reiniciar o processamento dos CNPJs com falha?')) {
+                    if (confirm('Tem certeza que deseja reprocessar os CNPJs com falha?')) {
                         this.disabled = true;
-                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Reprocessando...';
                         
-                        // Usa diretamente a URL pública
-                        console.log("Tentando resetar CNPJs com erro...");
-                        const url = '/api/reset-errors';
-                        console.log(`Usando URL: ${url}`);
-                        
-                        const response = await fetchWithRetry(url, {
+                        // Use the correct API path
+                        const response = await fetch('/api/admin/queue/reset-errors', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -1507,18 +1438,39 @@
                         });
                         
                         if (!response.ok) {
-                            console.error(`Erro com URL: ${url}, status: ${response.status}`);
                             throw new Error(`Erro ${response.status}: ${response.statusText}`);
                         }
-                        
-                        console.log(`Sucesso com URL: ${url}`);
                         
                         const result = await response.json();
                         
                         if (result.count > 0) {
-                            alert(`Reinicialização concluída! ${result.count} CNPJs com falha foram recolocados na fila.`);
+                            // Toast de sucesso
+                            const successToast = document.createElement('div');
+                            successToast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3';
+                            successToast.style.zIndex = "1050";
+                            successToast.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${result.count} CNPJs com falha foram recolocados na fila.`;
+                            document.body.appendChild(successToast);
+                            
+                            // Remove o toast após 5 segundos
+                            setTimeout(() => {
+                                successToast.style.opacity = '0';
+                                successToast.style.transition = 'opacity 0.5s';
+                                setTimeout(() => successToast.remove(), 500);
+                            }, 5000);
                         } else {
-                            alert('Nenhum CNPJ com falha foi encontrado para reiniciar.');
+                            // Toast informativo
+                            const infoToast = document.createElement('div');
+                            infoToast.className = 'alert alert-info position-fixed bottom-0 end-0 m-3';
+                            infoToast.style.zIndex = "1050";
+                            infoToast.innerHTML = `<i class="bi bi-info-circle-fill me-2"></i> Nenhum CNPJ com falha encontrado.`;
+                            document.body.appendChild(infoToast);
+                            
+                            // Remove o toast após 5 segundos
+                            setTimeout(() => {
+                                infoToast.style.opacity = '0';
+                                infoToast.style.transition = 'opacity 0.5s';
+                                setTimeout(() => infoToast.remove(), 500);
+                            }, 5000);
                         }
                         
                         // Atualiza o status após resetar
@@ -1526,103 +1478,21 @@
                     }
                 } catch (error) {
                     console.error('Erro ao resetar CNPJs:', error);
-                    alert(`Erro ao reiniciar falhas: ${error.message}`);
-                } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR FALHAS';
-                }
-            });
-            
-            // Configura o botão de resetar limite excedido
-            resetRateLimitedBtn.addEventListener('click', async function() {
-                try {
-                    if (confirm('Tem certeza que deseja reiniciar o processamento dos CNPJs com limite de requisições excedido?')) {
-                        this.disabled = true;
-                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
-                        
-                        // Usa diretamente a URL pública
-                        console.log("Tentando resetar CNPJs com limite excedido...");
-                        const url = '/api/reset-rate-limited';
-                        console.log(`Usando URL: ${url}`);
-                        
-                        const response = await fetchWithRetry(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            console.error(`Erro com URL: ${url}, status: ${response.status}`);
-                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        console.log(`Sucesso com URL: ${url}`);
-                        
-                        const result = await response.json();
-                        
-                        if (result.count > 0) {
-                            alert(`Reinicialização concluída! ${result.count} CNPJs com limite excedido foram recolocados na fila.`);
-                        } else {
-                            alert('Nenhum CNPJ com limite excedido foi encontrado para reiniciar.');
-                        }
-                        
-                        // Atualiza o status após resetar
-                        await updateStatus(true);
-                    }
-                } catch (error) {
-                    console.error('Erro ao resetar CNPJs com limite excedido:', error);
-                    alert(`Erro ao reiniciar CNPJs com limite excedido: ${error.message}`);
-                } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR LIMITE EXCEDIDO';
-                }
-            });
-            
-            // Formata automaticamente o CNPJ ao digitar - com debounce para melhor performance
-            let debounceTimeout;
-            cnpjInput.addEventListener('input', function(e) {
-                clearTimeout(debounceTimeout);
-                
-                const inputValue = e.target.value;
-                
-                // Se não tiver números, não processa
-                if (!/\d/.test(inputValue)) return;
-                
-                debounceTimeout = setTimeout(() => {
-                    let value = inputValue.replace(/\D/g, '');
-                    if (value.length <= 14) {
-                        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-                        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                        value = value.replace(/(\d{4})(\d)/, '$1-$2');
-                    }
                     
-                    // Só atualiza se o valor formatado for diferente
-                    if (value !== inputValue) {
-                        e.target.value = value;
-                    }
-                }, 100);
-            });
-            
-            // Efeito futurista de código hexadecimal mudando
-            function updateHexCode() {
-                const hexCodeElements = document.querySelectorAll('.hex-code-animation');
-                hexCodeElements.forEach(element => {
-                    let hexCode = '';
-                    for (let i = 0; i < 3; i++) {
-                        hexCode += '0x' + Math.floor(Math.random() * 16777215).toString(16).padStart(8, '0').toUpperCase() + '<br>';
-                    }
-                    hexCode += '...';
-                    element.innerHTML = hexCode;
-                });
-                
-                setTimeout(updateHexCode, 3000);
-            }
-            
-            // Inicia o efeito hexadecimal
-            updateHexCode();
-        });
-    </script>
-</body>
-</html>
+                    // Toast de erro
+                    const errorToast = document.createElement('div');
+                    errorToast.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
+                    errorToast.style.zIndex = "1050";
+                    errorToast.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro: ${error.message}`;
+                    document.body.appendChild(errorToast);
+                    
+                    // Remove o toast após 5 segundos
+                    setTimeout(() => {
+                        errorToast.style.opacity = '0';
+                        errorToast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => errorToast.remove(), 500);
+                    }, 5000);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-arrow-repeat"></i> Reprocessar Falhas';
+                }

@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNPJ Nexus - Sistema Avançado de Raspagem de CNPJs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0df2c9;
+            --primary-dark: #0bbea0;
+            --primary-glow: rgba(13, 242, 201, 0.3);
+            --secondary: #6e3bfe;
+            --secondary-dark: #5b2ff0;
+            --secondary-glow: rgba(110, 59, 254, 0.3);
+            --tertiary: #ff3864;
+            --background: #0a1929;
+            --surface: #0f2940;
+            --surface-dark: #0d2338;
+            --surface-light: #1a3c5c;
+            --text: #ffffff;
+            --text-secondary: #b8d1e8;
+            --border: #1e4976;
+            --warning: #ffb648;
+            --danger: #ff4757;
+            --info: #18dcff;
+            --success: #0df2c9;
+            --gradient-primary: linear-gradient(135deg, #0df2c9, #0bbea0);
+            --gradient-accent: linear-gradient(135deg, #6e3bfe, #ff3864);
+            --gradient-header: linear-gradient(135deg, #0a1929, #091f38);
+            --gradient-surface: linear-gradient(145deg, #0f2940, #0d2338);
+            --grid-line: rgba(13, 242, 201, 0.1);
+            --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.6);
+            --glow-sm: 0 0 5px var(--primary-glow);
+            --glow-md: 0 0 10px var(--primary-glow);
+            --glow-lg: 0 0 20px var(--primary-glow);
+            --border-radius: 0.375rem;
+            --border-radius-lg: 0.625rem;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 var(--primary-glow); }
+            70% { box-shadow: 0 0 0 5px rgba(13, 242, 201, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(13, 242, 201, 0); }
+        }
+
+        @keyframes scanning {
+            0% { transform: translateY(-100%); opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { transform: translateY(100%); opacity: 0.3; }
+        }
+
+        @keyframes grid-flow {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--surface-dark);
+        }
+
+        *::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: var(--surface-dark);
+            border-radius: 10px;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: var(--primary);
+            border-radius: 10px;
+            border: 2px solid var(--surface-dark);
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(13, 242, 201, 0.03) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(110, 59, 254, 0.03) 0%, transparent 20%),
+                linear-gradient(to right, rgba(13, 242, 201, 0.01) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(13, 242, 201, 0.01) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 20px 20px, 20px 20px;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(rgba(13, 242, 201, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: 0.5px;
+        }
+
+        .header {
+            background: var(--gradient-header);
+            border-bottom: 1px solid var(--border);
+            padding: 2.5rem 0;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right, transparent 10%, rgba(13, 242, 201, 0.03) 50%, transparent 90%);
+            animation: scanning 10s linear infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(13, 242, 201, 0.5);
+        }
+
+        .header .lead {
+            opacity: 0.9;
+            font-weight: 500;
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 2;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 3;
+        }
+
+        .data-icon {
+            color: var(--primary);
+            filter: drop-shadow(0 0 5px var(--primary-glow));
+            margin-right: 0.5rem;
+        }
+
+        .card {
+            background: var(--gradient-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gradient-accent);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .card:hover::after {
+            opacity: 1;
+        }
+
+        .card-header {
+            background-color: var(--surface-dark);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.25rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+        }
+
+        .card-header .card-title {
+            margin: 0;
+            color: var(--text);
+            font-size: 1.25rem;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .file-upload-container {
+            border: 2px dashed var(--border);
+            border-radius: var(--border-radius);
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            background-color: rgba(13, 242, 201, 0.03);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-upload-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: grid-flow 20s linear infinite;
+            opacity: 0.5;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .file-upload-container:hover {
+            border-color: var(--primary);
+            box-shadow: var(--glow-sm);
+            cursor: pointer;
+            transform: translateY(-2px);
+        }
+
+        .status-card {
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.375rem;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: var(--shadow-sm);
+            border: none;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+            z-index: -1;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: var(--background);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--glow-sm);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: var(--background);
+        }
+
+        .btn-success:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--glow-sm);
+        }
+
+        .btn-outline-primary {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary);
+            color: var(--background);
+            transform: translateY(-2px);
+            box-shadow: var(--glow-sm);
+        }
+
+        .btn-outline-danger:hover {
+            transform: translateY(-2px);
+        }
+
+        .spinner-border {
+            display: none;
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .processing .spinner-border {
+            display: inline-block;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+            border-radius: 50rem;
+            font-weight: 600;
+            font-family: 'Roboto Mono', monospace;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow-sm);
+            display: inline-block;
+        }
+
+        .bg-success {
+            background-color: var(--success) !important;
+            color: var(--background);
+        }
+
+        .bg-warning {
+            background-color: var(--warning) !important;
+            color: var(--background);
+        }
+
+        .bg-danger {
+            background-color: var(--danger) !important;
+            color: var(--text);
+        }
+
+        .bg-info {
+            background-color: var(--info) !important;
+            color: var(--background);
+        }
+
+        .cnpj-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: var(--border-radius);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+            background-color: white;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .table {
+            margin-bottom: 0;
+            color: white;
+        }
+
+        .table thead th {
+            background-color: var(--surface);
+            color: var(--primary);
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            text-shadow: 0 0 2px rgba(13, 242, 201, 0.5);
+        }
+
+        .table tbody td {
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .table-hover tbody tr {
+            transition: var(--transition);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(13, 242, 201, 0.2);
+        }
+        
+        .table-hover tbody tr:hover td {
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+
+        .form-control {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--border);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.95rem;
+            background-color: var(--surface-dark);
+            color: var(--text);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: var(--glow-sm);
+            background-color: rgba(13, 242, 201, 0.05);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .input-group-text {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--primary);
+        }
+
+        .form-check-input {
+            cursor: pointer;
+            background-color: white;
+            border: 1px solid var(--primary-dark);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            box-shadow: var(--glow-sm);
+        }
+
+        .form-label {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .form-text {
+            color: var(--text-secondary);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        .stat-card {
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            overflow: hidden;
+            height: 100%;
+            border: 1px solid var(--border);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow-sm);
+        }
+
+        .stat-card h6 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
+        }
+
+        .stat-card .card-text {
+            font-weight: 700;
+            margin-bottom: 0;
+            color: var(--text);
+            font-size: 1.75rem;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            padding: 1.5rem 0;
+            background-color: var(--surface-dark);
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .footer::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: var(--gradient-accent);
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border);
+            background-color: var(--surface-dark);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .modal-header .modal-title {
+            color: var(--text);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            color: var(--text);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border);
+            padding: 1.25rem 1.5rem;
+            background-color: var(--surface-dark);
+        }
+
+        pre {
+            background-color: var(--surface-dark);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border);
+            font-size: 0.875rem;
+            font-family: 'Roboto Mono', monospace;
+            color: var(--text);
+            padding: 1rem;
+        }
+
+        .upload-icon {
+            animation: pulse 2s infinite;
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .dropdown-menu {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            padding: 0.5rem 0;
+        }
+
+        .dropdown-item {
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            padding: 0.5rem 1rem;
+            transition: var(--transition);
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(13, 242, 201, 0.1);
+            color: var(--primary);
+        }
+
+        .dropdown-item i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .alert-light {
+            background-color: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .badge {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 500;
+            padding: 0.35em 0.65em;
+            border-radius: 0.25rem;
+        }
+
+        .btn-secondary {
+            background-color: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--surface);
+            color: var(--primary);
+        }
+
+        .highlight-pulse {
+            position: relative;
+        }
+
+        .highlight-pulse::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: var(--primary);
+            opacity: 0.7;
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 0;
+            }
+            
+            .card-header {
+                padding: 1rem 1.25rem;
+            }
+            
+            .card-body {
+                padding: 1.25rem;
+            }
+            
+            .file-upload-container {
+                padding: 2rem 1rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 1rem;
+            }
+        }
+
+        /* Código hexadecimal animado */
+        .hex-code-animation {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--primary);
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+            max-width: 250px;
+            overflow: hidden;
+            text-align: right;
+        }
+
+        /* Decorações futuristas */
+        .tech-decoration {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border: 1px solid var(--primary);
+            border-radius: 50%;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .tech-decoration.top-left {
+            top: -50px;
+            left: -50px;
+        }
+
+        .tech-decoration.bottom-right {
+            bottom: -50px;
+            right: -50px;
+        }
+
+        /* Barra de progresso para ações */
+        .progress-thin {
+            height: 2px;
+            background-color: var(--surface-dark);
+            margin-top: 0.5rem;
+            overflow: hidden;
+            border-radius: var(--border-radius);
+        }
+
+        .progress-thin .progress-bar {
+            background: var(--gradient-accent);
+            border-radius: var(--border-radius);
+        }
+    </style>
+</head>
+<body>
+    <div class="tech-decoration top-left"></div>
+    <div class="tech-decoration bottom-right"></div>
+
+    <div class="header">
+        <div class="container header-content">
+            <h1 class="mb-0"><i class="bi bi-cpu data-icon"></i>CNPJ NEXUS</h1>
+            <p class="lead">Sistema Avançado de Raspagem de CNPJs <span class="highlight-pulse">v1.0</span></p>
+        </div>
+    </div>
+
+    <div class="container mb-5">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-cloud-upload data-icon"></i>Upload</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="hex-code-animation">
+                            0x7A45F8D2<br>0xE9C3B0A1<br>0x8F20D719<br>...
+                        </div>
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="mb-3 file-upload-container" id="drop-zone">
+                                <div class="mb-3">
+                                    <i class="bi bi-database-fill upload-icon"></i>
+                                </div>
+                                <h5>Incluir CNPJs</h5>
+                                <p class="text-muted">Arraste o arquivo ou</p>
+                                <input type="file" id="file-input" class="d-none" accept=".csv,.xls,.xlsx">
+                                <button type="button" class="btn btn-primary" id="select-file-btn">
+                                    <i class="bi bi-folder me-2"></i>Selecionar Arquivo
+                                </button>
+                                <p class="mt-3 text-muted small">CSV | XLS | XLSX</p>
+                            </div>
+                            <div class="mb-3" id="selected-file-container" style="display: none;">
+                                <div class="d-flex align-items-center p-3 bg-surface-dark rounded">
+                                    <i class="bi bi-file-earmark-binary me-3 text-primary" style="font-size: 1.5rem;"></i>
+                                    <span id="selected-file-name" class="me-auto fw-medium text-truncate text-white"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-file-btn">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100" id="upload-btn">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span id="upload-btn-text"><i class="bi bi-lightning-fill me-2"></i>INICIAR EXTRAÇÃO</span>
+                            </button>
+                            <div class="progress-thin">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-search data-icon"></i>CONSULTA PONTUAL</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="manual-form">
+                            <div class="mb-3">
+                                <label for="cnpj-input" class="form-label fw-medium">IDENTIFICADOR CNPJ</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                                    <input type="text" class="form-control" id="cnpj-input" placeholder="00.000.000/0000-00">
+                                </div>
+                                <div class="form-text">Digite o identificador único para extração individual</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="consult-btn">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span id="consult-btn-text"><i class="bi bi-search me-2"></i>EXTRAIR DADOS</span>
+                            </button>
+                            <div class="progress-thin">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card status-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title"><i class="bi bi-graph-up data-icon"></i>MONITOR DE DADOS</h5>
+                        <div>
+                            <div class="dropdown d-inline-block me-2">
+                                <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-file-earmark-binary me-1"></i> EXPORTAR
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados</a></li>
+                                    <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Seleção Atual</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" id="refresh-status-btn">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-arrow-repeat me-1"></i> ATUALIZAR
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-6 col-md-3">
+                                <div class="card stat-card bg-surface">
+                                    <div class="card-body text-center py-3">
+                                        <h6 class="card-subtitle mb-1">TOTAL</h6>
+                                        <p class="card-text" id="total-count">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card stat-card" style="background: rgba(13, 242, 201, 0.1);">
+                                    <div class="card-body text-center py-3">
+                                        <h6 class="card-subtitle mb-1">CONCLUÍDOS</h6>
+                                        <p class="card-text" style="color: var(--success);" id="completed-count">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card stat-card" style="background: rgba(255, 182, 72, 0.1);">
+                                    <div class="card-body text-center py-3">
+                                        <h6 class="card-subtitle mb-1">FILA</h6>
+                                        <p class="card-text" style="color: var(--warning);" id="processing-count">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card stat-card" style="background: rgba(255, 71, 87, 0.1);">
+                                    <div class="card-body text-center py-3">
+                                        <h6 class="card-subtitle mb-1">FALHAS</h6>
+                                        <p class="card-text" style="color: var(--danger);" id="error-count">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="cnpj-list">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th width="40">
+                                            <div class="form-check">
+                                                <input type="checkbox" id="select-all-cnpjs" class="form-check-input">
+                                            </div>
+                                        </th>
+                                        <th>IDENTIFICADOR</th>
+                                        <th>STATUS</th>
+                                        <th width="80">AÇÕES</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cnpj-status-list">
+                                    <!-- Será preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container text-center">
+            <p class="mb-0">CNPJ NEXUS - SISTEMA AVANÇADO DE RASPAGEM DE CNPJS <span class="text-primary">•</span> VIA RECEITAWS</p>
+        </div>
+    </div>
+
+    <!-- Modal de resultado -->
+    <div class="modal fade" id="result-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-braces data-icon"></i>DADOS EXTRAÍDOS</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="result-container">
+                        <!-- Será preenchido via JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos do DOM
+            const uploadForm = document.getElementById('upload-form');
+            const fileInput = document.getElementById('file-input');
+            const selectFileBtn = document.getElementById('select-file-btn');
+            const dropZone = document.getElementById('drop-zone');
+            const selectedFileContainer = document.getElementById('selected-file-container');
+            const selectedFileName = document.getElementById('selected-file-name');
+            const removeFileBtn = document.getElementById('remove-file-btn');
+            const uploadBtn = document.getElementById('upload-btn');
+            
+            const manualForm = document.getElementById('manual-form');
+            const cnpjInput = document.getElementById('cnpj-input');
+            const consultBtn = document.getElementById('consult-btn');
+            
+            const refreshStatusBtn = document.getElementById('refresh-status-btn');
+            const cnpjStatusList = document.getElementById('cnpj-status-list');
+            
+            const totalCount = document.getElementById('total-count');
+            const completedCount = document.getElementById('completed-count');
+            const processingCount = document.getElementById('processing-count');
+            const errorCount = document.getElementById('error-count');
+            
+            const resultModal = new bootstrap.Modal(document.getElementById('result-modal'));
+            const resultContainer = document.getElementById('result-container');
+            
+            // Funções auxiliares
+            function formatCNPJ(cnpj) {
+                cnpj = cnpj.replace(/\D/g, '');
+                if (cnpj.length !== 14) return cnpj;
+                return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+            }
+            
+            function getStatusBadge(status) {
+                const statusMap = {
+                    'completed': '<span class="badge bg-success status-badge">CONCLUÍDO</span>',
+                    'processing': '<span class="badge bg-warning status-badge">PROCESSANDO</span>',
+                    'queued': '<span class="badge bg-info status-badge">NA FILA</span>',
+                    'error': '<span class="badge bg-danger status-badge">FALHA</span>',
+                    'unknown': '<span class="badge bg-secondary status-badge">DESCONHECIDO</span>'
+                };
+                return statusMap[status] || statusMap.unknown;
+            }
+            
+            // Variáveis para controlar atualização
+            let autoUpdateEnabled = true;
+            let isUpdating = false;
+            let updateTimeout = null;
+            
+            // Cache para dados
+            let statusCache = {
+                data: null,
+                timestamp: 0
+            };
+            
+            // Função para fazer fetch com retry e backoff exponencial
+            async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+                let retries = 0;
+                
+                while (retries < maxRetries) {
+                    try {
+                        const response = await fetch(url, options);
+                        
+                        if (response.ok) {
+                            return response;
+                        }
+                        
+                        // Se for erro 503 (Service Unavailable), tenta novamente
+                        if (response.status === 503) {
+                            retries++;
+                            const waitTime = Math.min(1000 * (2 ** retries), 10000); // Máximo de 10 segundos
+                            console.log(`Servidor sobrecarregado (503). Tentativa ${retries}/${maxRetries}. Aguardando ${waitTime/1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                            continue;
+                        }
+                        
+                        // Para outros erros, retorna a resposta para tratamento
+                        return response;
+                    } catch (error) {
+                        retries++;
+                        if (retries >= maxRetries) {
+                            throw error;
+                        }
+                        
+                        const waitTime = Math.min(1000 * (2 ** retries), 10000);
+                        console.log(`Erro de rede. Tentativa ${retries}/${maxRetries}. Aguardando ${waitTime/1000}s...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            }
+            
+            // Função otimizada para atualizar o status
+            async function updateStatus(forceRefresh = false) {
+                // Evita múltiplas chamadas simultâneas
+                if (isUpdating) return;
+                
+                try {
+                    isUpdating = true;
+                    refreshStatusBtn.classList.add('processing');
+                    
+                    const now = Date.now();
+                    
+                    // Sempre busca dados frescos se forçar atualização
+                    const response = await fetchWithRetry(`/api/status/?_t=${now}`);
+                    if (!response.ok) {
+                        throw new Error(`Erro ao atualizar status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log("Dados obtidos do servidor:", data);
+                    
+                    // Armazena em cache
+                    statusCache.data = data;
+                    statusCache.timestamp = now;
+                    
+                    // Atualiza contadores
+                    totalCount.textContent = data.total;
+                    completedCount.textContent = data.completed;
+                    processingCount.textContent = data.processing;
+                    errorCount.textContent = data.error;
+                    
+                    // Renderiza tabela
+                    renderStatusTable(data);
+                    
+                } catch (error) {
+                    console.error('Erro ao atualizar status:', error);
+                    // Mostra mensagem de erro na interface
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger mt-3';
+                    errorMsg.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> Erro ao atualizar status: ${error.message}`;
+                    errorMsg.style.opacity = '1';
+                    
+                    // Adiciona a mensagem após a tabela
+                    const cnpjList = document.querySelector('.cnpj-list');
+                    
+                    // Remove mensagens de erro anteriores
+                    const oldErrors = document.querySelectorAll('.alert-danger');
+                    oldErrors.forEach(el => el.remove());
+                    
+                    cnpjList.after(errorMsg);
+                    
+                    // Faz a mensagem desaparecer após 5 segundos
+                    setTimeout(() => {
+                        errorMsg.style.transition = 'opacity 1s';
+                        errorMsg.style.opacity = '0';
+                        setTimeout(() => errorMsg.remove(), 1000);
+                    }, 5000);
+                } finally {
+                    isUpdating = false;
+                    refreshStatusBtn.classList.remove('processing');
+                }
+            }
+            
+            // Função para renderizar a tabela de status
+            function renderStatusTable(data) {
+                // Usa DocumentFragment para melhorar performance
+                const fragment = document.createDocumentFragment();
+                
+                data.results.forEach(result => {
+                    const tr = document.createElement('tr');
+                    const formattedCNPJ = formatCNPJ(result.cnpj);
+                    const statusBadge = getStatusBadge(result.status);
+                    
+                    // Célula do checkbox
+                    const tdCheck = document.createElement('td');
+                    const divCheck = document.createElement('div');
+                    divCheck.className = 'form-check';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input cnpj-checkbox';
+                    checkbox.value = result.cnpj;
+                    divCheck.appendChild(checkbox);
+                    tdCheck.appendChild(divCheck);
+                    
+                    // Célula do CNPJ
+                    const tdCnpj = document.createElement('td');
+                    const span = document.createElement('span');
+                    span.className = 'fw-bold text-dark';
+                    span.style.color = "#001428";
+                    span.textContent = formattedCNPJ;
+                    tdCnpj.appendChild(span);
+                    
+                    // Célula do status
+                    const tdStatus = document.createElement('td');
+                    tdStatus.innerHTML = statusBadge;
+                    
+                    // Célula de ações
+                    const tdActions = document.createElement('td');
+                    if (result.status === 'completed') {
+                        const viewBtn = document.createElement('button');
+                        viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
+                        viewBtn.setAttribute('data-cnpj', result.cnpj);
+                        viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                        viewBtn.addEventListener('click', function() {
+                            showResult(result.cnpj);
+                        });
+                        tdActions.appendChild(viewBtn);
+                    }
+                    
+                    // Adiciona células à linha
+                    tr.appendChild(tdCheck);
+                    tr.appendChild(tdCnpj);
+                    tr.appendChild(tdStatus);
+                    tr.appendChild(tdActions);
+                    
+                    fragment.appendChild(tr);
+                });
+                
+                // Limpa tabela atual e adiciona novos elementos
+                while (cnpjStatusList.firstChild) {
+                    cnpjStatusList.removeChild(cnpjStatusList.firstChild);
+                }
+                cnpjStatusList.appendChild(fragment);
+                
+                // Configura o checkbox "selecionar todos"
+                const selectAllCheckbox = document.getElementById('select-all-cnpjs');
+                if (!selectAllCheckbox.hasAttribute('data-initialized')) {
+                    selectAllCheckbox.addEventListener('change', function() {
+                        document.querySelectorAll('.cnpj-checkbox').forEach(checkbox => {
+                            checkbox.checked = this.checked;
+                        });
+                    });
+                    selectAllCheckbox.setAttribute('data-initialized', 'true');
+                }
+            }
+            
+            // Função para mostrar resultado
+            async function showResult(cnpj) {
+                try {
+                    const response = await fetch(`/api/cnpj/${cnpj}`);
+                    const data = await response.json();
+                    
+                    let html = `
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary p-3 rounded-circle me-3" style="box-shadow: 0 0 15px var(--primary-glow);">
+                                    <i class="bi bi-building text-dark" style="font-size: 2rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1 text-white">${data.company_name || 'Sem nome'}</h5>
+                                    <p class="mb-0 text-white opacity-75">ID: <span class="text-primary">${formatCNPJ(data.cnpj)}</span></p>
+                                </div>
+                            </div>
+                            ${data.trade_name ? `<div class="alert alert-light"><strong class="text-dark">Nome Comercial:</strong> <span class="text-dark">${data.trade_name}</span></div>` : ''}
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-geo-alt me-2 data-icon"></i>Localização</h6>
+                                        <p class="mb-1 text-white">${data.address || 'Não informado'}</p>
+                                        <p class="mb-0 text-white">${data.city || ''} - ${data.state || ''} ${data.zip_code ? `<br>CEP: ${data.zip_code}` : ''}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-telephone me-2 data-icon"></i>Canais</h6>
+                                        <p class="mb-1 text-white"><strong>E-mail:</strong> ${data.email || 'Não informado'}</p>
+                                        <p class="mb-0 text-white"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-bank me-2 data-icon"></i>Simples Nacional</h6>
+                                    <p class="mb-1 text-white">${data.simples_nacional ? '<span class="badge bg-success">ATIVO</span>' : '<span class="badge bg-secondary">INATIVO</span>'}</p>
+                                    ${data.simples_nacional_date ? `<p class="mb-0 text-white"><strong>Desde:</strong> ${new Date(data.simples_nacional_date).toLocaleDateString()}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-code-slash me-2 data-icon"></i>DADOS RAW</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <pre class="m-0 p-3 rounded-0" style="max-height: 300px; overflow: auto;">${JSON.stringify(data.raw_data, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    resultContainer.innerHTML = html;
+                    resultModal.show();
+                } catch (error) {
+                    console.error('Erro ao buscar resultado:', error);
+                    alert('Erro ao extrair dados do CNPJ. Tente novamente.');
+                }
+            }
+            
+            // Configura input de arquivo - otimizado
+            selectFileBtn.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    selectedFileName.textContent = this.files[0].name;
+                    selectedFileContainer.style.display = 'block';
+                } else {
+                    selectedFileContainer.style.display = 'none';
+                }
+            });
+            
+            removeFileBtn.addEventListener('click', () => {
+                fileInput.value = '';
+                selectedFileContainer.style.display = 'none';
+            });
+            
+            // Configuração de Drag & Drop - otimizada
+            const preventDefaults = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+            
+            const highlight = () => dropZone.classList.add('bg-light');
+            const unhighlight = () => dropZone.classList.remove('bg-light');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, {passive: false});
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, {passive: true});
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, {passive: true});
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                fileInput.files = e.dataTransfer.files;
+                if (fileInput.files.length > 0) {
+                    selectedFileName.textContent = fileInput.files[0].name;
+                    selectedFileContainer.style.display = 'block';
+                }
+            }, {passive: false});
+            
+            // Submissão do formulário de upload
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (fileInput.files.length === 0) {
+                    alert('Selecione um arquivo para iniciar a extração de dados.');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                try {
+                    uploadBtn.classList.add('processing');
+                    uploadBtn.disabled = true;
+                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>PROCESSANDO...';
+                    
+                    // Adiciona animação de progresso
+                    const progressBar = uploadForm.querySelector('.progress-bar');
+                    progressBar.style.width = '0%';
+                    
+                    // Simula progresso durante o upload
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += 5;
+                        if (progress > 90) clearInterval(progressInterval);
+                        progressBar.style.width = `${progress}%`;
+                    }, 100);
+                    
+                    const response = await fetch('/api/upload-file/', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Erro na extração de dados.');
+                    }
+                    
+                    const data = await response.json();
+                    alert(`Extração iniciada com sucesso! ${data.total} CNPJs adicionados à fila de processamento.`);
+                    
+                    // Limpa o formulário
+                    fileInput.value = '';
+                    selectedFileContainer.style.display = 'none';
+                    
+                    // Atualiza status
+                    await updateStatus();
+                    
+                    // Reset da barra de progresso após um tempo
+                    setTimeout(() => {
+                        progressBar.style.width = '0%';
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Erro ao enviar arquivo:', error);
+                    alert('Erro durante a extração: ' + error.message);
+                } finally {
+                    uploadBtn.classList.remove('processing');
+                    uploadBtn.disabled = false;
+                    document.getElementById('upload-btn-text').innerHTML = '<i class="bi bi-lightning-fill me-2"></i>INICIAR EXTRAÇÃO';
+                }
+            });
+            
+            // Submissão do formulário manual
+            manualForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const cnpj = cnpjInput.value.trim();
+                if (!cnpj) {
+                    alert('Digite um CNPJ para iniciar a extração de dados.');
+                    return;
+                }
+                
+                try {
+                    consultBtn.classList.add('processing');
+                    consultBtn.disabled = true;
+                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>EXTRAINDO...';
+                    
+                    // Adiciona animação de progresso
+                    const progressBar = manualForm.querySelector('.progress-bar');
+                    progressBar.style.width = '0%';
+                    
+                    // Simula progresso durante a consulta
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += 10;
+                        if (progress > 90) clearInterval(progressInterval);
+                        progressBar.style.width = `${progress}%`;
+                    }, 100);
+                    
+                    const response = await fetch('/api/upload-cnpjs/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            cnpjs: [cnpj]
+                        })
+                    });
+                    
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Erro na extração de dados.');
+                    }
+                    
+                    await response.json();
+                    alert('CNPJ adicionado à fila de processamento!');
+                    
+                    // Limpa o formulário
+                    cnpjInput.value = '';
+                    
+                    // Atualiza status
+                    await updateStatus();
+                    
+                    // Reset da barra de progresso após um tempo
+                    setTimeout(() => {
+                        progressBar.style.width = '0%';
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Erro ao consultar CNPJ:', error);
+                    alert('Erro durante a extração: ' + error.message);
+                } finally {
+                    consultBtn.classList.remove('processing');
+                    consultBtn.disabled = false;
+                    document.getElementById('consult-btn-text').innerHTML = '<i class="bi bi-search me-2"></i>EXTRAIR DADOS';
+                }
+            });
+            
+            // Botão de exportar selecionados
+            document.getElementById('export-selected-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const selectedCnpjs = Array.from(document.querySelectorAll('.cnpj-checkbox:checked')).map(checkbox => checkbox.value);
+                
+                if (selectedCnpjs.length === 0) {
+                    alert('Selecione pelo menos um CNPJ para exportar.');
+                    return;
+                }
+                
+                // Cria a URL com os CNPJs selecionados
+                const url = '/api/export-excel-stream/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
+                
+                // Abre a URL em uma nova aba
+                window.open(url, '_blank');
+            });
+            
+            // Botão de atualização de status
+            refreshStatusBtn.addEventListener('click', updateStatus);
+            
+            // Carrega status inicial
+            updateStatus();
+            
+            // Botão de atualização manual
+            refreshStatusBtn.addEventListener('click', function() {
+                updateStatus();
+            });
+            
+            // Função para pausar/retomar atualização automática
+            function toggleAutoUpdate() {
+                autoUpdateEnabled = !autoUpdateEnabled;
+                
+                if (updateTimeout) {
+                    clearTimeout(updateTimeout);
+                    updateTimeout = null;
+                }
+                
+                if (autoUpdateEnabled) {
+                    scheduleNextUpdate();
+                }
+            }
+            
+            // Programa próxima atualização com intervalo de 30 segundos
+            function scheduleNextUpdate() {
+                if (!autoUpdateEnabled) return;
+                
+                // Limpa qualquer timeout existente
+                if (updateTimeout) {
+                    clearTimeout(updateTimeout);
+                }
+                
+                // Agenda próxima atualização
+                updateTimeout = setTimeout(() => {
+                    updateStatus().then(() => {
+                        scheduleNextUpdate();
+                    });
+                }, 30000); // 30 segundos
+            }
+            
+            // Adiciona um botão para habilitar/desabilitar atualização automática
+            const autoUpdateBtn = document.createElement('button');
+            autoUpdateBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+            autoUpdateBtn.innerHTML = '<i class="bi bi-cpu"></i> AUTO';
+            autoUpdateBtn.title = 'Pausar atualização automática';
+            
+            autoUpdateBtn.addEventListener('click', function() {
+                toggleAutoUpdate();
+                if (autoUpdateEnabled) {
+                    this.innerHTML = '<i class="bi bi-cpu"></i> AUTO';
+                    this.title = 'Pausar atualização automática';
+                    this.classList.remove('btn-secondary');
+                    this.classList.add('btn-outline-secondary');
+                } else {
+                    this.innerHTML = '<i class="bi bi-cpu-fill"></i> MANUAL';
+                    this.title = 'Retomar atualização automática';
+                    this.classList.remove('btn-outline-secondary');
+                    this.classList.add('btn-secondary');
+                }
+            });
+            
+            // Adiciona o botão ao lado do botão de atualização
+            refreshStatusBtn.parentNode.insertBefore(autoUpdateBtn, refreshStatusBtn.nextSibling);
+            
+            // Inicia atualização automática
+            scheduleNextUpdate();
+            
+            // Cria um container para os botões de ação
+            const actionButtonsContainer = document.createElement('div');
+            actionButtonsContainer.className = 'd-flex gap-2 mt-3';
+            
+            // Botão para resetar CNPJs com erro
+            const resetErrorsBtn = document.createElement('button');
+            resetErrorsBtn.id = 'reset-errors-btn';
+            resetErrorsBtn.className = 'btn btn-sm btn-outline-danger';
+            resetErrorsBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR FALHAS';
+            
+            // Botão para resetar CNPJs com limite excedido
+            const resetRateLimitedBtn = document.createElement('button');
+            resetRateLimitedBtn.id = 'reset-rate-limited-btn';
+            resetRateLimitedBtn.className = 'btn btn-sm btn-outline-warning';
+            resetRateLimitedBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR LIMITE EXCEDIDO';
+            
+            // Adiciona os botões ao container
+            actionButtonsContainer.appendChild(resetErrorsBtn);
+            actionButtonsContainer.appendChild(resetRateLimitedBtn);
+            
+            // Adiciona o container abaixo da tabela
+            document.querySelector('.cnpj-list').after(actionButtonsContainer);
+            
+            // Configura o botão de resetar falhas
+            resetErrorsBtn.addEventListener('click', async function() {
+                try {
+                    if (confirm('Tem certeza que deseja reiniciar o processamento dos CNPJs com falha?')) {
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
+                        
+                        // Usa diretamente a URL pública
+                        console.log("Tentando resetar CNPJs com erro...");
+                        const url = '/api/reset-errors';
+                        console.log(`Usando URL: ${url}`);
+                        
+                        const response = await fetchWithRetry(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            console.error(`Erro com URL: ${url}, status: ${response.status}`);
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        console.log(`Sucesso com URL: ${url}`);
+                        
+                        const result = await response.json();
+                        
+                        if (result.count > 0) {
+                            alert(`Reinicialização concluída! ${result.count} CNPJs com falha foram recolocados na fila.`);
+                        } else {
+                            alert('Nenhum CNPJ com falha foi encontrado para reiniciar.');
+                        }
+                        
+                        // Atualiza o status após resetar
+                        await updateStatus(true);
+                    }
+                } catch (error) {
+                    console.error('Erro ao resetar CNPJs:', error);
+                    alert(`Erro ao reiniciar falhas: ${error.message}`);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR FALHAS';
+                }
+            });
+            
+            // Configura o botão de resetar limite excedido
+            resetRateLimitedBtn.addEventListener('click', async function() {
+                try {
+                    if (confirm('Tem certeza que deseja reiniciar o processamento dos CNPJs com limite de requisições excedido?')) {
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> REINICIANDO...';
+                        
+                        // Usa diretamente a URL pública
+                        console.log("Tentando resetar CNPJs com limite excedido...");
+                        const url = '/api/reset-rate-limited';
+                        console.log(`Usando URL: ${url}`);
+                        
+                        const response = await fetchWithRetry(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            console.error(`Erro com URL: ${url}, status: ${response.status}`);
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        console.log(`Sucesso com URL: ${url}`);
+                        
+                        const result = await response.json();
+                        
+                        if (result.count > 0) {
+                            alert(`Reinicialização concluída! ${result.count} CNPJs com limite excedido foram recolocados na fila.`);
+                        } else {
+                            alert('Nenhum CNPJ com limite excedido foi encontrado para reiniciar.');
+                        }
+                        
+                        // Atualiza o status após resetar
+                        await updateStatus(true);
+                    }
+                } catch (error) {
+                    console.error('Erro ao resetar CNPJs com limite excedido:', error);
+                    alert(`Erro ao reiniciar CNPJs com limite excedido: ${error.message}`);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> REINICIAR LIMITE EXCEDIDO';
+                }
+            });
+            
+            // Formata automaticamente o CNPJ ao digitar - com debounce para melhor performance
+            let debounceTimeout;
+            cnpjInput.addEventListener('input', function(e) {
+                clearTimeout(debounceTimeout);
+                
+                const inputValue = e.target.value;
+                
+                // Se não tiver números, não processa
+                if (!/\d/.test(inputValue)) return;
+                
+                debounceTimeout = setTimeout(() => {
+                    let value = inputValue.replace(/\D/g, '');
+                    if (value.length <= 14) {
+                        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                        value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                    }
+                    
+                    // Só atualiza se o valor formatado for diferente
+                    if (value !== inputValue) {
+                        e.target.value = value;
+                    }
+                }, 100);
+            });
+            
+            // Efeito futurista de código hexadecimal mudando
+            function updateHexCode() {
+                const hexCodeElements = document.querySelectorAll('.hex-code-animation');
+                hexCodeElements.forEach(element => {
+                    let hexCode = '';
+                    for (let i = 0; i < 3; i++) {
+                        hexCode += '0x' + Math.floor(Math.random() * 16777215).toString(16).padStart(8, '0').toUpperCase() + '<br>';
+                    }
+                    hexCode += '...';
+                    element.innerHTML = hexCode;
+                });
+                
+                setTimeout(updateHexCode, 3000);
+            }
+            
+            // Inicia o efeito hexadecimal
+            updateHexCode();
+        });
+    </script>
+</body>
+</html>
