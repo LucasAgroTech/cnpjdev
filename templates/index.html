@@ -1088,7 +1088,7 @@
                     const tdActions = document.createElement('td');
                     if (result.status === 'completed') {
                         const viewBtn = document.createElement('button');
-                        viewBtn.className = 'btn btn-sm btn-outline-primary view-result-btn';
+                        viewBtn.className = 'btn btn-sm btn-success view-result-btn';
                         viewBtn.setAttribute('data-cnpj', result.cnpj);
                         viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
                         viewBtn.addEventListener('click', function() {
