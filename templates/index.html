@@ -798,8 +798,10 @@
                                     <i class="bi bi-file-earmark-binary me-1"></i> EXPORTAR
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
-                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo</a></li>
-                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel-stream/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo (Otimizado)</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel-stream/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados (Otimizado)</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel/"><i class="bi bi-file-earmark-excel me-2"></i>Exportar Completo (Legado)</a></li>
+                                    <li><a class="dropdown-item" href="/api/export-excel/?status=completed"><i class="bi bi-check-circle me-2"></i>Dados Processados (Legado)</a></li>
                                     <li><a class="dropdown-item" href="#" id="export-selected-btn"><i class="bi bi-check-square me-2"></i>Seleção Atual</a></li>
                                 </ul>
                             </div>
@@ -1389,7 +1391,7 @@
                 }
                 
                 // Cria a URL com os CNPJs selecionados
-                const url = '/api/export-excel/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
+                const url = '/api/export-excel-stream/?' + selectedCnpjs.map(cnpj => `cnpjs=${cnpj}`).join('&');
                 
                 // Abre a URL em uma nova aba
                 window.open(url, '_blank');

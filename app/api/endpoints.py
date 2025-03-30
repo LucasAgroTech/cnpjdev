@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 import os
 import logging
+import io
 from datetime import datetime, timedelta
 import asyncio
+import xlsxwriter
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import List, Optional, Dict, Any
 
 from app.models.database import get_db
 from app.models import schemas
@@ -301,6 +306,142 @@ def export_excel(
     # Retorna o arquivo para download
     return Response(
         content=excel_data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@router.get("/export-excel-stream/", response_class=StreamingResponse)
+def export_excel_stream(
+    cnpjs: List[str] = Query(None),
+    status: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporta dados de CNPJs para Excel usando streaming
+    
+    Implementação otimizada que processa os dados em lotes para reduzir o uso de memória
+    e evitar timeouts em grandes volumes de dados.
+    """
+    logger.info("Exportando dados para Excel via streaming")
+    
+    # Define o nome do arquivo com a data atual
+    filename = f"cnpjs_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    # Cria um gerador para streaming
+    def generate_excel():
+        # Cria um buffer na memória
+        output = io.BytesIO()
+        
+        # Cria o escritor Excel
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True, 'constant_memory': True})
+        worksheet = workbook.add_worksheet('CNPJs')
+        
+        # Define formatos
+        header_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#0f2940',
+            'font_color': '#0df2c9',
+            'border': 1
+        })
+        
+        # Escreve cabeçalhos
+        headers = ['CNPJ', 'Razão Social', 'Nome Fantasia', 'Situação', 'Endereço', 
+                  'Cidade', 'Estado', 'CEP', 'Email', 'Telefone', 
+                  'Simples Nacional', 'Data de Opção Simples', 'Data de Consulta']
+        
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        
+        # Consulta os dados em lotes
+        row = 1
+        batch_size = 500  # Processa 500 CNPJs por vez
+        
+        # Constrói a consulta base
+        query = db.query(CNPJData)
+        
+        # Aplica filtros
+        if cnpjs:
+            clean_cnpjs = [''.join(filter(str.isdigit, cnpj)) for cnpj in cnpjs]
+            query = query.filter(CNPJData.cnpj.in_(clean_cnpjs))
+        
+        if status:
+            cnpj_queries = db.query(CNPJQuery.cnpj).filter(CNPJQuery.status == status).all()
+            status_cnpjs = [q.cnpj for q in cnpj_queries]
+            if status_cnpjs:
+                query = query.filter(CNPJData.cnpj.in_(status_cnpjs))
+            else:
+                # Se não houver CNPJs com o status especificado, retorna Excel vazio
+                logger.warning(f"Nenhum CNPJ com status '{status}' encontrado.")
+        
+        # Obtém o total de registros para log
+        total_count = query.count()
+        logger.info(f"Gerando Excel com {total_count} CNPJs via streaming")
+        
+        if total_count == 0:
+            # Se não houver dados, fecha o workbook e retorna
+            workbook.close()
+            output.seek(0)
+            data = output.getvalue()
+            output.close()
+            return data
+        
+        # Processa em lotes para economizar memória
+        offset = 0
+        while True:
+            batch = query.order_by(CNPJData.cnpj).limit(batch_size).offset(offset).all()
+            if not batch:
+                break
+                
+            for cnpj_data in batch:
+                worksheet.write(row, 0, cnpj_data.cnpj)
+                worksheet.write(row, 1, cnpj_data.company_name)
+                worksheet.write(row, 2, cnpj_data.trade_name)
+                worksheet.write(row, 3, cnpj_data.status)
+                worksheet.write(row, 4, cnpj_data.address)
+                worksheet.write(row, 5, cnpj_data.city)
+                worksheet.write(row, 6, cnpj_data.state)
+                worksheet.write(row, 7, cnpj_data.zip_code)
+                worksheet.write(row, 8, cnpj_data.email)
+                worksheet.write(row, 9, cnpj_data.phone)
+                worksheet.write(row, 10, 'Sim' if cnpj_data.simples_nacional else 'Não')
+                
+                # Trata campos de data com segurança
+                if cnpj_data.simples_nacional_date:
+                    worksheet.write(row, 11, cnpj_data.simples_nacional_date.strftime('%d/%m/%Y') if hasattr(cnpj_data.simples_nacional_date, 'strftime') else str(cnpj_data.simples_nacional_date))
+                else:
+                    worksheet.write(row, 11, '')
+                    
+                if cnpj_data.updated_at:
+                    worksheet.write(row, 12, cnpj_data.updated_at.strftime('%d/%m/%Y %H:%M:%S') if hasattr(cnpj_data.updated_at, 'strftime') else str(cnpj_data.updated_at))
+                else:
+                    worksheet.write(row, 12, '')
+                
+                row += 1
+            
+            # Avança para o próximo lote
+            offset += batch_size
+            logger.debug(f"Processados {min(offset, total_count)} de {total_count} CNPJs")
+            
+            # Libera memória explicitamente
+            del batch
+            
+        # Ajusta largura das colunas
+        for i, col in enumerate(headers):
+            worksheet.set_column(i, i, len(col) + 2)
+        
+        # Fecha o workbook e obtém os dados
+        workbook.close()
+        
+        # Retorna os dados e reinicia o buffer
+        output.seek(0)
+        data = output.getvalue()
+        output.close()
+        
+        return data
+    
+    # Retorna uma resposta de streaming
+    return StreamingResponse(
+        io.BytesIO(generate_excel()),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
