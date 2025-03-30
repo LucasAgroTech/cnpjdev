@@ -58,7 +58,7 @@ fi
 
 # Implanta no Heroku
 echo -e "${YELLOW}Implantando alterações no Heroku...${NC}"
-git push heroku master
+git push heroku main:master
 
 # Verifica se o push foi bem-sucedido
 if [ $? -ne 0 ]; then
