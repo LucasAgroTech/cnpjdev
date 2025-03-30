@@ -373,23 +373,24 @@
             color: var(--background);
         }
 
+        /* Estilos atualizados para a tabela */
         .cnpj-list {
             max-height: 400px;
             overflow-y: auto;
             border-radius: var(--border-radius);
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
-            background-color: white;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.4);
+            background-color: var(--surface-dark);
             border: 1px solid var(--border);
             position: relative;
         }
 
         .table {
             margin-bottom: 0;
-            color: white;
+            color: var(--text);
         }
 
         .table thead th {
-            background-color: var(--surface);
+            background-color: var(--surface-dark);
             color: var(--primary);
             font-weight: 700;
             font-family: 'Orbitron', sans-serif;
@@ -406,7 +407,8 @@
             padding: 0.75rem 1rem;
             font-family: 'Rajdhani', sans-serif;
             font-weight: 500;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: var(--surface);
+            color: var(--text);
         }
 
         .table-hover tbody tr {
@@ -414,11 +416,49 @@
         }
 
         .table-hover tbody tr:hover {
-            background-color: rgba(13, 242, 201, 0.2);
+            background-color: rgba(13, 242, 201, 0.1);
         }
-        
+
         .table-hover tbody tr:hover td {
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: var(--surface-light);
+        }
+
+        /* Ajuste para o conteúdo de texto nas células da tabela */
+        .table .fw-bold {
+            color: var(--text) !important;
+            font-weight: 600;
+        }
+
+        /* Ajuste para os checkboxes na tabela */
+        .table .form-check-input {
+            background-color: var(--surface-dark);
+            border: 1px solid var(--primary-dark);
+        }
+
+        .table .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Estilo adicional para as linhas alternadas se preferir */
+        .table tbody tr:nth-of-type(odd) td {
+            background-color: rgba(15, 41, 64, 0.8);
+        }
+
+        .table tbody tr:nth-of-type(even) td {
+            background-color: rgba(13, 35, 56, 0.8);
+        }
+
+        /* Estilo para botões dentro da tabela */
+        .table .btn-success {
+            background: var(--gradient-primary);
+            color: var(--background);
+        }
+
+        .table .btn-success:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--glow-sm);
         }
 
         .form-control {
