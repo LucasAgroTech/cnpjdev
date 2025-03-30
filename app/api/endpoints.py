@@ -256,61 +256,7 @@ async def reset_rate_limited_public(
     
     return {"message": f"{count} CNPJs com limite de requisições resetados para a fila", "count": count}
 
-@router.get("/export-excel/", response_class=Response)
-def export_excel(
-    cnpjs: List[str] = Query(None),
-    status: str = Query(None),
-    db: Session = Depends(get_db)
-):
-    """
-    Exporta dados de CNPJs para Excel
-    
-    Se nenhum CNPJ for especificado, exporta todos os CNPJs consultados.
-    Opcionalmente, pode-se filtrar por status.
-    """
-    logger.info("Exportando dados para Excel")
-    
-    # Consulta os dados no banco
-    query = db.query(CNPJData)
-    
-    # Filtra por CNPJs específicos se fornecidos
-    if cnpjs:
-        # Limpa CNPJs
-        clean_cnpjs = [''.join(filter(str.isdigit, cnpj)) for cnpj in cnpjs]
-        query = query.filter(CNPJData.cnpj.in_(clean_cnpjs))
-    
-    # Filtra por status se fornecido
-    if status:
-        # Obtém os CNPJs com o status especificado
-        cnpj_queries = db.query(CNPJQuery.cnpj).filter(CNPJQuery.status == status).distinct().all()
-        status_cnpjs = [q.cnpj for q in cnpj_queries]
-        
-        if status_cnpjs:
-            query = query.filter(CNPJData.cnpj.in_(status_cnpjs))
-        else:
-            # Se não houver CNPJs com o status especificado, retorna vazio
-            raise HTTPException(status_code=404, detail=f"Nenhum CNPJ com status '{status}' encontrado.")
-    
-    # Executa a consulta
-    cnpj_data_list = query.all()
-    
-    if not cnpj_data_list:
-        raise HTTPException(status_code=404, detail="Nenhum dado de CNPJ encontrado.")
-    
-    # Gera o Excel
-    excel_data = generate_cnpj_excel(cnpj_data_list)
-    
-    # Define o nome do arquivo com a data atual
-    filename = f"cnpjs_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    
-    # Retorna o arquivo para download
-    return Response(
-        content=excel_data,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-@router.get("/export-excel-stream/", response_class=StreamingResponse)
+@router.get("/export-excel/", response_class=StreamingResponse)
 def export_excel_stream(
     cnpjs: List[str] = Query(None),
     status: str = Query(None),

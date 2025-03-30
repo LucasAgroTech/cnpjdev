@@ -256,17 +256,19 @@ O sistema permite exportar os dados de CNPJs consultados para um arquivo Excel, 
 
 A interface web oferece várias opções para exportação:
 
-- **Exportar Todos**: Exporta todos os CNPJs consultados
-- **Apenas Concluídos**: Exporta apenas os CNPJs com status "completed"
-- **Selecionados**: Exporta apenas os CNPJs selecionados na tabela
+- **Exportar Completo**: Exporta todos os CNPJs
+- **Dados Processados**: Exporta apenas os CNPJs com status "completed"
+- **Seleção Atual**: Exporta apenas os CNPJs selecionados na tabela
 
 ### Endpoint de API
 
-O endpoint de exportação para Excel também pode ser acessado diretamente:
+O sistema oferece um endpoint otimizado para exportação de Excel:
 
 - `GET /api/export-excel/`: Exporta todos os CNPJs
 - `GET /api/export-excel/?status=completed`: Exporta apenas CNPJs com status "completed"
 - `GET /api/export-excel/?cnpjs=00000000000000&cnpjs=11111111111111`: Exporta CNPJs específicos
+
+### Conteúdo do Excel
 
 O arquivo Excel gerado contém todas as informações disponíveis para cada CNPJ, incluindo:
 - Dados cadastrais (Razão Social, Nome Fantasia)
@@ -274,3 +276,25 @@ O arquivo Excel gerado contém todas as informações disponíveis para cada CNP
 - Contatos (Email, Telefone)
 - Informações sobre Simples Nacional
 - Data da consulta
+
+### Exportação Otimizada com Streaming
+
+O sistema implementa uma abordagem de streaming para a exportação de Excel, que resolve problemas de memória e timeout ao lidar com grandes volumes de dados:
+
+#### Características da Exportação
+
+1. **Processamento em Lotes**: Processa 500 CNPJs por vez, reduzindo drasticamente o uso de memória
+2. **Streaming HTTP**: Envia o arquivo enquanto é gerado, evitando armazenar o arquivo inteiro na memória
+3. **Otimização de Memória**: Configura o xlsxwriter para modo de memória constante e libera memória após cada lote
+4. **Tratamento de Erros**: Lida com campos de data de forma segura e verifica se há dados antes de tentar gerar o Excel
+
+#### Recomendações para Grandes Volumes
+
+Para volumes extremamente grandes (dezenas de milhares de CNPJs), considere aumentar o tamanho do dyno no Heroku:
+```bash
+heroku ps:resize web=standard-2x
+```
+
+#### Documentação Detalhada
+
+Para mais informações sobre a implementação da exportação otimizada, consulte o arquivo [OTIMIZACAO_EXCEL.md](OTIMIZACAO_EXCEL.md).

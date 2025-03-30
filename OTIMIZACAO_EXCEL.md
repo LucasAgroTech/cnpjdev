@@ -58,12 +58,12 @@ Implementamos uma abordagem de streaming para a exportação de Excel, que:
 
 ## Detalhes da Implementação
 
-### 1. Novo Endpoint de Streaming
+### 1. Endpoint Otimizado com Streaming
 
-Adicionamos um novo endpoint `/api/export-excel-stream/` que implementa a abordagem de streaming:
+Atualizamos o endpoint `/api/export-excel/` para usar a abordagem de streaming:
 
 ```python
-@router.get("/export-excel-stream/", response_class=StreamingResponse)
+@router.get("/export-excel/", response_class=StreamingResponse)
 def export_excel_stream(
     cnpjs: List[str] = Query(None),
     status: str = Query(None),
@@ -71,6 +71,9 @@ def export_excel_stream(
 ):
     """
     Exporta dados de CNPJs para Excel usando streaming
+    
+    Implementação otimizada que processa os dados em lotes para reduzir o uso de memória
+    e evitar timeouts em grandes volumes de dados.
     """
     # ...
     return StreamingResponse(
@@ -108,11 +111,11 @@ while True:
 
 ### 3. Interface Atualizada
 
-Atualizamos a interface do usuário para incluir as novas opções de exportação:
+Atualizamos a interface do usuário para simplificar as opções de exportação:
 
-- "Exportar Completo (Otimizado)" - Usa o novo endpoint de streaming
-- "Dados Processados (Otimizado)" - Usa o novo endpoint com filtro de status
-- Mantivemos as opções legadas para compatibilidade
+- "Exportar Completo" - Exporta todos os CNPJs
+- "Dados Processados" - Exporta apenas os CNPJs com status "completed"
+- "Seleção Atual" - Exporta apenas os CNPJs selecionados na tabela
 
 ## Resultados Esperados
 

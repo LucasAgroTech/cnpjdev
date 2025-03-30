@@ -102,7 +102,7 @@ echo -e "${GREEN}O sistema agora exporta Excel de forma otimizada, garantindo:${
 echo -e "${GREEN}- Menor consumo de memória durante a exportação${NC}"
 echo -e "${GREEN}- Processamento em lotes para evitar timeouts${NC}"
 echo -e "${GREEN}- Suporte a grandes volumes de dados${NC}"
-echo -e "${GREEN}- Interface atualizada com opções de exportação otimizada${NC}"
+echo -e "${GREEN}- Interface simplificada sem opções legadas${NC}"
 echo -e "${YELLOW}Para testar a exportação, acesse a aplicação e use o botão 'EXPORTAR' no painel de monitoramento.${NC}"
 echo -e "${YELLOW}Para monitorar os logs, execute:${NC}"
 echo -e "  heroku logs --tail"
