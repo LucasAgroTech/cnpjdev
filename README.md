@@ -1,4 +1,4 @@
-# CNPJ Consulta
+# CNPJ Extractor
 
 Sistema automatizado de consulta de CNPJs via múltiplas APIs (ReceitaWS, CNPJ.ws e CNPJa Open), com armazenamento em PostgreSQL.
 ![Dashboard](dashboard.png)
